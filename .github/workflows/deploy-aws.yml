@@ -1,0 +1,36 @@
+name: Deploy AWS Infrastructure
+
+on:
+  push:
+    branches: [main]
+    paths: ['aws/**']
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install CDK dependencies
+        run: pip install -r aws/requirements.txt
+
+      - name: Install AWS CDK CLI
+        run: npm install -g aws-cdk
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsDeployRole
+          aws-region: eu-central-1
+
+      - name: Deploy
+        working-directory: aws
+        run: cdk deploy --require-approval never

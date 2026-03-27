@@ -1,0 +1,3 @@
+[bitcoin.reachability]
+service_endpoint   = "https://bitnodes.io/api/v1/nodes/me-8333/"
+heartbeat_endpoint = "REPLACE_with_cdk_stack_output_url"
