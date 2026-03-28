@@ -4,8 +4,8 @@
 # If reachable, posts a heartbeat to AWS. The AWS watchdog Lambda alerts
 # when heartbeats stop arriving (catches Pi/network/node outages).
 
-import sys
 import json
+import sys
 import traceback
 
 from .utils.config import config
@@ -16,27 +16,27 @@ def check():
     if is_reachable():
         post_heartbeat()
     else:
-        print('Node is not reachable from outside.')
+        print("Node is not reachable from outside.")
 
 
 def is_reachable():
     cfg = config()
-    endpoint = cfg['bitcoin']['reachability']['service_endpoint']
+    endpoint = cfg["bitcoin"]["reachability"]["service_endpoint"]
     try:
         result = Request().get(endpoint)
-        return json.loads(result).get('success', False)
+        return json.loads(result).get("success", False)
     except ConnectionError:
         return False
 
 
 def post_heartbeat():
     cfg = config()
-    endpoint = cfg['bitcoin']['reachability']['heartbeat_endpoint']
+    endpoint = cfg["bitcoin"]["reachability"]["heartbeat_endpoint"]
     try:
-        Request().post(endpoint, {'source': 'lasvegas'})
-        print('Heartbeat sent.')
+        Request().post(endpoint, {"source": "lasvegas"})
+        print("Heartbeat sent.")
     except ConnectionError as e:
-        print(f'Failed to send heartbeat: {e}')
+        print(f"Failed to send heartbeat: {e}")
 
 
 def run():
@@ -47,5 +47,5 @@ def run():
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run()
