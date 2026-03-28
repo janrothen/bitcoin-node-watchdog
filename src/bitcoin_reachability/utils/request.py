@@ -1,6 +1,7 @@
-import requests
 import json
 from enum import Enum
+
+import requests
 
 
 class Method(Enum):
@@ -10,7 +11,7 @@ class Method(Enum):
     DELETE = 4
 
 
-class Request(object):
+class Request:
     def get(self, url):
         return self.perform(Method.GET, url)
 
@@ -37,7 +38,7 @@ class Request(object):
 
         if r.status_code not in (200, 201):
             raise ConnectionError(
-                f'\nCode: {r.status_code}\nResult: {r.text}\nData: {data}'
+                f"\nCode: {r.status_code}\nResult: {r.text}\nData: {data}"
             )
 
         return r.text
