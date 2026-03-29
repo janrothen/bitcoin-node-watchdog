@@ -1,5 +1,11 @@
 # bitcoin-node-watchdog
 
+![Python](https://img.shields.io/badge/python-3.13-blue)
+![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi%204-red)
+![AWS CDK](https://img.shields.io/badge/infra-AWS%20CDK-orange)
+[![Deploy AWS](https://github.com/janrothen/bitcoin-node-watchdog/actions/workflows/deploy-aws.yml/badge.svg)](https://github.com/janrothen/bitcoin-node-watchdog/actions/workflows/deploy-aws.yml)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 Monitors a Bitcoin full node on Raspberry Pi. Checks external reachability via [bitnodes.io](https://bitnodes.io) and posts a heartbeat to AWS. A watchdog Lambda alerts via email when heartbeats stop — catching Pi crashes, network outages, and node failures.
 
 ## Pi setup
@@ -78,3 +84,27 @@ cdk deploy
 ```
 
 **6. Update `config.toml`** with the `HeartbeatReceiverUrl` from the CloudFormation stack outputs.
+
+## Dev/test
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+pytest
+```
+
+## Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---------|--------------|-----|
+| No heartbeat received, node appears reachable | `heartbeat_endpoint` in `config.toml` is wrong or empty | Update with `HeartbeatReceiverUrl` from CloudFormation outputs |
+| Alert email never arrives | SES sender address not verified | Verify the sender in AWS SES → Verified identities |
+| `cdk deploy` fails with auth error | GitHub OIDC role or `AWS_ACCOUNT_ID` secret misconfigured | Re-check IAM trust policy and secret value |
+| `python -m bitcoin_reachability` exits with HTTP error | bitnodes.io `service_endpoint` unreachable or node not yet synced | Confirm the node is fully synced and port 8333 is open |
+| Cron job not running | Wrong Python path in crontab | Use absolute path: `/home/pi/bitcoin-node-watchdog/.venv/bin/python` |
+| Watchdog fires but node is actually fine | Heartbeat Lambda timeout too short | Increase `SILENCE_THRESHOLD_MINUTES` in the CDK stack and redeploy |
+
+## License
+
+MIT © Jan Rothen — see [LICENSE](LICENSE) for details.
