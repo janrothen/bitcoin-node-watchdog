@@ -97,22 +97,7 @@ The Lambda functions use only Python standard library + `boto3` (built into the 
 
 ### Pi — cron job
 
-Update the `HOME` variable at the top of `etc/cron.d/bitcoin-node-watchdog` to match where you cloned the repo, then:
-
-```bash
-# Install the cron file
-sudo cp etc/cron.d/bitcoin-node-watchdog /etc/cron.d/
-sudo chmod 644 /etc/cron.d/bitcoin-node-watchdog
-sudo chown root:root /etc/cron.d/bitcoin-node-watchdog
-
-# Create the log file (cron runs as user pi)
-sudo touch /var/log/bitcoin-node-watchdog-cron.log
-sudo chown pi:pi /var/log/bitcoin-node-watchdog-cron.log
-
-# Verify cron picked it up
-sudo systemctl status cron
-tail -f /var/log/bitcoin-node-watchdog-cron.log
-```
+See [etc/cron.d/README.md](etc/cron.d/README.md) for installation steps.
 
 ### AWS — one-time setup
 
