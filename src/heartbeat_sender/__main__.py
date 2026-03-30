@@ -21,9 +21,10 @@ def post_heartbeat():
     try:
         r = requests.post(endpoint, json={"source": "lasvegas"})
         if r.status_code not in (200, 201):
-            raise ConnectionError(f"\nCode: {r.status_code}\nResult: {r.text}")
+            print(f"Failed to send heartbeat:\nCode: {r.status_code}\nResult: {r.text}")
+            return
         print("Heartbeat sent.")
-    except ConnectionError as e:
+    except requests.exceptions.RequestException as e:
         print(f"Failed to send heartbeat: {e}")
 
 

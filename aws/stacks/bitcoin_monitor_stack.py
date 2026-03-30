@@ -93,10 +93,11 @@ class BitcoinMonitorStack(cdk.Stack):
             runtime=lambda_.Runtime.PYTHON_3_13,
             handler="lambda_function.lambda_handler",
             code=lambda_.Code.from_asset("lambdas/reachability_checker"),
-            timeout=Duration.seconds(30),
+            timeout=Duration.seconds(25),
             environment={
                 "DUCKDNS_HOSTNAME": "you-monkey.duckdns.org",
                 "BITCOIN_PORT": "8333",
+                "NODE_ID": NODE_ID,
             },
         )
         checker.add_to_role_policy(

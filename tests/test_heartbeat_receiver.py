@@ -40,6 +40,14 @@ def test_empty_json_body_defaults_to_unknown(mock_table, mock_cw):
 
 @patch.object(lf, "cloudwatch")
 @patch.object(lf, "table")
+def test_malformed_json_returns_400(mock_table, mock_cw):
+    result = lf.lambda_handler({"body": "not-json"}, None)
+    assert result == {"statusCode": 400, "body": "invalid json"}
+    mock_table.put_item.assert_not_called()
+
+
+@patch.object(lf, "cloudwatch")
+@patch.object(lf, "table")
 def test_cloudwatch_metric_uses_source_as_node_id(mock_table, mock_cw):
     event = {"body": json.dumps({"source": "lasvegas"})}
     lf.lambda_handler(event, None)
