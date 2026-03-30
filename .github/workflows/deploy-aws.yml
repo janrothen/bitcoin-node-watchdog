@@ -29,7 +29,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsDeployRole
-          aws-region: eu-central-1
+          aws-region: eu-north-1
 
       - name: Deploy
         working-directory: aws
