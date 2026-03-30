@@ -6,8 +6,9 @@
 import sys
 import traceback
 
-from .utils.config import config
-from .utils.request import Request
+import requests
+
+from .config import config
 
 
 def check():
@@ -18,7 +19,9 @@ def post_heartbeat():
     cfg = config()
     endpoint = cfg["bitcoin"]["reachability"]["heartbeat_endpoint"]
     try:
-        Request().post(endpoint, {"source": "lasvegas"})
+        r = requests.post(endpoint, json={"source": "lasvegas"})
+        if r.status_code not in (200, 201):
+            raise ConnectionError(f"\nCode: {r.status_code}\nResult: {r.text}")
         print("Heartbeat sent.")
     except ConnectionError as e:
         print(f"Failed to send heartbeat: {e}")

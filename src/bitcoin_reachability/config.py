@@ -1,0 +1,25 @@
+import tomllib
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# src/bitcoin_reachability/config.py → project root is three levels up
+_PROJECT_ROOT = Path(__file__).parent.parent.parent
+
+load_dotenv(_PROJECT_ROOT / ".env")
+
+
+def _load():
+    with open(_PROJECT_ROOT / "config.toml", "rb") as f:
+        return tomllib.load(f)
+
+
+_config = _load()
+
+
+def config():
+    return _config
+
+
+def project_root() -> Path:
+    return _PROJECT_ROOT
