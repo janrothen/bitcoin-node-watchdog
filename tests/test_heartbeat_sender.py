@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock, patch
 
+import requests
+
 from heartbeat_sender.__main__ import post_heartbeat
 
 ENDPOINT = "https://example.lambda-url.eu-north-1.on.aws/"
@@ -42,9 +44,20 @@ def test_post_heartbeat_bad_status(mock_config, mock_post, capsys):
 
 
 @patch(
-    "heartbeat_sender.__main__.requests.post", side_effect=ConnectionError("timeout")
+    "heartbeat_sender.__main__.requests.post",
+    side_effect=requests.exceptions.ConnectionError("timeout"),
 )
 @patch("heartbeat_sender.__main__.config", return_value=CONFIG)
 def test_post_heartbeat_connection_error(mock_config, mock_post, capsys):
+    post_heartbeat()
+    assert "Failed to send heartbeat" in capsys.readouterr().out
+
+
+@patch(
+    "heartbeat_sender.__main__.requests.post",
+    side_effect=requests.exceptions.Timeout("timed out"),
+)
+@patch("heartbeat_sender.__main__.config", return_value=CONFIG)
+def test_post_heartbeat_timeout(mock_config, mock_post, capsys):
     post_heartbeat()
     assert "Failed to send heartbeat" in capsys.readouterr().out

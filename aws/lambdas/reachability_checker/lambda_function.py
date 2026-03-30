@@ -9,7 +9,7 @@ import boto3
 MAGIC = b"\xf9\xbe\xb4\xd9"  # Bitcoin mainnet magic bytes
 CLOUDWATCH = boto3.client("cloudwatch")
 NAMESPACE = "BitcoinNode"
-DIMENSION = {"Name": "NodeId", "Value": "lasvegas"}
+DIMENSION = {"Name": "NodeId", "Value": os.environ.get("NODE_ID", "lasvegas")}
 
 
 def lambda_handler(event, context):
@@ -38,7 +38,8 @@ def _version_message(ip: str, port: int) -> bytes:
     addr_recv = _net_addr(ip, port)
     addr_from = _net_addr("0.0.0.0", 0)
     nonce = struct.pack("<Q", int.from_bytes(os.urandom(8), "little"))
-    user_agent = b"\x10/Satoshi:0.21.0/"  # varint(16) + string
+    user_agent_str = b"/Satoshi:0.21.0/"
+    user_agent = bytes([len(user_agent_str)]) + user_agent_str
     start_height = struct.pack("<i", 0)
 
     payload = (
@@ -71,7 +72,8 @@ def _message(command: bytes, payload: bytes) -> bytes:
 def _wait_for_verack(sock: socket.socket) -> bool:
     sock.settimeout(10)
     buf = b""
-    # Read until we find a verack or give up after 4096 bytes
+    # Read until we find a verack or give up after 4096 bytes.
+    # Bounded by the 10s socket timeout even if the remote sends continuous garbage.
     while len(buf) < 4096:
         chunk = sock.recv(256)
         if not chunk:

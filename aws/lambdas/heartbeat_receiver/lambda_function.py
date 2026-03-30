@@ -9,7 +9,10 @@ cloudwatch = boto3.client("cloudwatch")
 
 
 def lambda_handler(event, context):
-    body = json.loads(event.get("body") or "{}")
+    try:
+        body = json.loads(event.get("body") or "{}")
+    except json.JSONDecodeError:
+        return {"statusCode": 400, "body": "invalid json"}
     source = body.get("source", "unknown")
     table.put_item(
         Item={

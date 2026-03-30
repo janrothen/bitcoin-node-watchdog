@@ -14,10 +14,13 @@ def _load():
         return tomllib.load(f)
 
 
-_config = _load()
+_config = None
 
 
 def config():
+    global _config
+    if _config is None:
+        _config = _load()
     return _config
 
 
