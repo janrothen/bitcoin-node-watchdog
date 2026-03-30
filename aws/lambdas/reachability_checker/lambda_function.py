@@ -38,7 +38,7 @@ def _version_message(ip: str, port: int) -> bytes:
     addr_recv = _net_addr(ip, port)
     addr_from = _net_addr("0.0.0.0", 0)
     nonce = struct.pack("<Q", int.from_bytes(os.urandom(8), "little"))
-    user_agent_str = b"/Satoshi:0.21.0/"
+    user_agent_str = b"/Satoshi:30.2.0/"
     user_agent = bytes([len(user_agent_str)]) + user_agent_str
     start_height = struct.pack("<i", 0)
 
