@@ -70,7 +70,7 @@ heartbeat_endpoint = "https://<id>.lambda-url.eu-north-1.on.aws/"
 
 ```bash
 cd ~/bitcoin-node-watchdog
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
 ```
@@ -83,7 +83,7 @@ python -m bitcoin_reachability
 ## Development
 
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 pytest
