@@ -97,9 +97,21 @@ The Lambda functions use only Python standard library + `boto3` (built into the 
 
 ### Pi — cron job
 
-Add to crontab (`crontab -e`) to send a heartbeat every hour:
-```
-0 * * * * /home/pi/bitcoin-node-watchdog/.venv/bin/python -m bitcoin_reachability
+Update the `HOME` variable at the top of `etc/cron.d/bitcoin-node-watchdog` to match where you cloned the repo, then:
+
+```bash
+# Install the cron file
+sudo cp etc/cron.d/bitcoin-node-watchdog /etc/cron.d/
+sudo chmod 644 /etc/cron.d/bitcoin-node-watchdog
+sudo chown root:root /etc/cron.d/bitcoin-node-watchdog
+
+# Create the log file (cron runs as user pi)
+sudo touch /var/log/bitcoin-node-watchdog-cron.log
+sudo chown pi:pi /var/log/bitcoin-node-watchdog-cron.log
+
+# Verify cron picked it up
+sudo systemctl status cron
+tail -f /var/log/bitcoin-node-watchdog-cron.log
 ```
 
 ### AWS — one-time setup
@@ -180,7 +192,7 @@ All resources live in the `BitcoinMonitorStack` CloudFormation stack (visible in
 | Cron job not running | Wrong Python path — use absolute path: `/home/pi/bitcoin-node-watchdog/.venv/bin/python` |
 | CloudWatch alarms stuck in INSUFFICIENT_DATA | No data yet — wait up to 1h for the first Lambda invocations |
 | Alarm fires every hour instead of once | OK action not set on alarm — redeploy the CDK stack |
-| DuckDNS lookup returns stale IP | DDNS update cron (`ddns-update-monkey`) not running on Pi — check that cron job |
+| DuckDNS lookup returns stale IP | DDNS update cron (`bitcoin-node-watchdog`) not running on Pi — check that cron job |
 
 ## Security
 

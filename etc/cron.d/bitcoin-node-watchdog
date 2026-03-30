@@ -1,0 +1,12 @@
+# File: /etc/cron.d/bitcoin-node-watchdog
+# Purpose: Send hourly heartbeat to AWS from the Bitcoin node on the Raspberry Pi
+# Owner: root:root, Permissions: 644 (readable by root & cron daemon)
+
+SHELL=/bin/sh
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+HOME=/home/pi/raspberry/bitcoin-node-watchdog
+LOG=/var/log/bitcoin-node-watchdog-cron.log
+TZ=Europe/Zurich
+
+# --- Hourly heartbeat ---------------------------------------------------------
+0 * * * *  pi  cd $HOME && .venv/bin/python -m bitcoin_reachability >> $LOG 2>&1
