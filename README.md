@@ -1,4 +1,4 @@
-# bitcoin-node-watchdog
+# Bitcoin Node Watchdog
 
 ![Python](https://img.shields.io/badge/python-3.13-blue)
 ![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi%204-red)
