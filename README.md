@@ -146,9 +146,10 @@ cdk bootstrap aws://YOUR_ACCOUNT_ID/eu-north-1
   ```
 - Attach permissions: `AWSCloudFormationFullAccess`, `AWSLambda_FullAccess`, `AmazonDynamoDBFullAccess`, `AmazonSNSFullAccess`, `CloudWatchFullAccess`, `AmazonEventBridgeFullAccess`, `IAMFullAccess`
 
-**3. Add GitHub secret:**
+**3. Add GitHub secrets:**
 - Repo Settings → Secrets and variables → Actions → New secret
 - Name: `AWS_ACCOUNT_ID`, value: your 12-digit AWS account ID
+- Name: `HEARTBEAT_SECRET`, value: same secret as your Pi's `.env` file
 
 **4. Deploy:**
 
