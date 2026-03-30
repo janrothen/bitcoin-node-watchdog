@@ -10,8 +10,8 @@ Monitors a Bitcoin full node on Raspberry Pi. The Pi sends an hourly heartbeat t
 
 ## Structure
 ```
-src/bitcoin_reachability/   # installable package
-  __main__.py               # entry point: python -m bitcoin_reachability
+src/heartbeat_sender/       # installable package
+  __main__.py               # entry point: python -m heartbeat_sender
                             # sends heartbeat unconditionally every hour
   utils/
 aws/                        # CDK infrastructure (deployed via GitHub Actions)

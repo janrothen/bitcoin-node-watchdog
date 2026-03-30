@@ -3,7 +3,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-# src/bitcoin_reachability/config.py → project root is three levels up
+# src/heartbeat_sender/config.py → project root is three levels up
 _PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 load_dotenv(_PROJECT_ROOT / ".env")

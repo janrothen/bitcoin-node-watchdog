@@ -60,8 +60,8 @@ sequenceDiagram
 The Pi reads `config.toml` at runtime. There are no secrets in this file — it only contains URLs.
 
 ```toml
-[bitcoin.reachability]
-heartbeat_endpoint = "https://<id>.lambda-url.eu-north-1.on.aws/"
+[heartbeat.receiver]
+endpoint = "https://<id>.lambda-url.eu-north-1.on.aws/"
 ```
 
 `heartbeat_endpoint` comes from the `HeartbeatReceiverUrl` CloudFormation stack output after deploying. All other settings (DuckDNS hostname, Bitcoin port, alarm thresholds, alert email) live in the CDK stack (`aws/stacks/bitcoin_monitor_stack.py`).
@@ -77,7 +77,7 @@ pip install -e .
 
 Run once manually:
 ```bash
-python -m bitcoin_reachability
+python -m heartbeat_sender
 ```
 
 ## Development
@@ -173,7 +173,7 @@ All resources live in the `BitcoinMonitorStack` CloudFormation stack (visible in
 | No alert email ever arrives | SNS subscription not confirmed — check inbox for the confirmation link |
 | Alert fires but node is actually fine | bitnodes handshake timing out due to slow node startup; wait for full sync |
 | `cdk deploy` fails with auth error | OIDC role misconfigured or `AWS_ACCOUNT_ID` secret wrong — re-check IAM trust policy |
-| `python -m bitcoin_reachability` exits silently | `heartbeat_endpoint` in `config.toml` not set — update with CloudFormation output URL |
+| `python -m heartbeat_sender` exits silently | `heartbeat_endpoint` in `config.toml` not set — update with CloudFormation output URL |
 | Cron job not running | Wrong Python path — use absolute path: `/home/pi/bitcoin-node-watchdog/.venv/bin/python` |
 | CloudWatch alarms stuck in INSUFFICIENT_DATA | No data yet — wait up to 1h for the first Lambda invocations |
 | Alarm fires every hour instead of once | OK action not set on alarm — redeploy the CDK stack |
