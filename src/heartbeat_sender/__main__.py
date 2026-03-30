@@ -3,8 +3,10 @@
 # Sends a heartbeat to AWS every hour so the watchdog knows the Pi is alive.
 # Reachability of the Bitcoin node is checked independently by a Lambda on AWS.
 
+import os
 import sys
 import traceback
+from datetime import UTC, datetime
 
 import requests
 
@@ -18,8 +20,14 @@ def check():
 def post_heartbeat():
     cfg = config()
     endpoint = cfg["heartbeat"]["receiver"]["endpoint"]
+    secret = os.environ["HEARTBEAT_SECRET"]
+    body = {
+        "source": "lasvegas",
+        "sent_at": datetime.now(UTC).isoformat(),
+    }
+    headers = {"X-Heartbeat-Token": secret}
     try:
-        r = requests.post(endpoint, json={"source": "lasvegas"})
+        r = requests.post(endpoint, json=body, headers=headers)
         if r.status_code not in (200, 201):
             print(f"Failed to send heartbeat:\nCode: {r.status_code}\nResult: {r.text}")
             return

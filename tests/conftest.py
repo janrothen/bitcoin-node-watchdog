@@ -8,5 +8,6 @@ os.environ.setdefault("TABLE_NAME", "test-table")
 os.environ.setdefault("DUCKDNS_HOSTNAME", "test.duckdns.org")
 os.environ.setdefault("BITCOIN_PORT", "8333")
 os.environ.setdefault("NODE_ID", "lasvegas")
+os.environ.setdefault("HEARTBEAT_SECRET", "test-secret")
 
 sys.modules["boto3"] = MagicMock()

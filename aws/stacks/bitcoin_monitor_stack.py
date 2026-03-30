@@ -64,6 +64,13 @@ class BitcoinMonitorStack(cdk.Stack):
         alert_topic.add_subscription(sns_subscriptions.EmailSubscription(ALERT_EMAIL))
 
         # ── Heartbeat receiver (Pi → Lambda → DynamoDB + CloudWatch) ─────────
+        heartbeat_secret = self.node.try_get_context("heartbeat_secret")
+        if not heartbeat_secret:
+            raise ValueError(
+                "CDK context value 'heartbeat_secret' is required. "
+                "Pass it with: cdk deploy --context heartbeat_secret=<secret>"
+            )
+
         receiver = lambda_.Function(
             self,
             "HeartbeatReceiver",
@@ -71,7 +78,10 @@ class BitcoinMonitorStack(cdk.Stack):
             runtime=lambda_.Runtime.PYTHON_3_13,
             handler="lambda_function.lambda_handler",
             code=lambda_.Code.from_asset("lambdas/heartbeat_receiver"),
-            environment={"TABLE_NAME": table.table_name},
+            environment={
+                "TABLE_NAME": table.table_name,
+                "HEARTBEAT_SECRET": heartbeat_secret,
+            },
         )
         table.grant_write_data(receiver)
         receiver.add_to_role_policy(
