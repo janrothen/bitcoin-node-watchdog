@@ -66,6 +66,20 @@ endpoint = "https://<id>.lambda-url.eu-north-1.on.aws/"
 
 `heartbeat_endpoint` comes from the `HeartbeatReceiverUrl` CloudFormation stack output after deploying. All other settings (DuckDNS hostname, Bitcoin port, alarm thresholds, alert email) live in the CDK stack (`aws/stacks/bitcoin_monitor_stack.py`).
 
+## Credentials (`.env`)
+
+Copy `.env.example` to `.env` and fill in your credentials:
+
+```bash
+cp .env.example .env
+```
+
+```dotenv
+HEARTBEAT_SECRET=your-shared-secret
+```
+
+Generate a strong secret with: `python3 -c "import secrets; print(secrets.token_hex(32))"`
+
 ## Install & run
 
 ```bash
@@ -143,7 +157,7 @@ Push any change under `aws/` to `main` — GitHub Actions runs `cdk deploy` auto
 Or deploy manually:
 ```bash
 cd aws
-cdk deploy
+cdk deploy --context heartbeat_secret=<your-secret>
 ```
 
 **5. Confirm SNS email subscription:**
@@ -182,7 +196,7 @@ All resources live in the `BitcoinMonitorStack` CloudFormation stack (visible in
 ## Security
 
 - `config.toml` contains no secrets — it is safe to commit
-- The heartbeat Lambda URL has no authentication; rate limiting is handled by AWS
+- Requests are authenticated with a shared secret (`X-Heartbeat-Token` header); the receiver rejects tokens older than 90 seconds
 - Never commit AWS credentials — the deployment uses OIDC (no stored keys)
 - The `AWS_ACCOUNT_ID` GitHub secret is a 12-digit number, not a credential, but keep it private
 
