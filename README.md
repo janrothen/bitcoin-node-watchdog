@@ -6,11 +6,68 @@
 [![Deploy AWS](https://github.com/janrothen/bitcoin-node-watchdog/actions/workflows/deploy-aws.yml/badge.svg)](https://github.com/janrothen/bitcoin-node-watchdog/actions/workflows/deploy-aws.yml)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-Monitors a Bitcoin full node on Raspberry Pi. Checks external reachability via [bitnodes.io](https://bitnodes.io) and posts a heartbeat to AWS. A watchdog Lambda alerts via email when heartbeats stop — catching Pi crashes, network outages, and node failures.
+Monitors a Bitcoin full node running on a Raspberry Pi. A Python package on the Pi sends an hourly heartbeat to AWS. A Lambda on AWS independently checks whether the node is reachable from the internet every hour by performing a real Bitcoin P2P handshake (resolving the current IP via DuckDNS, then exchanging `version`/`verack` messages on port 8333). CloudWatch Alarms watch both signals and send a single email via SNS when either has been missing for 6 hours — and another when it recovers.
 
-## Pi setup
+## Requirements
 
-**Install the package:**
+**Hardware**
+- Raspberry Pi 4, 8 GB RAM
+- Bitcoin full node reachable on port 8333 from the internet
+- Dynamic DNS via [DuckDNS](https://www.duckdns.org) keeping your public IP up to date
+
+**Software**
+- OS: Debian GNU/Linux 13 (trixie), aarch64
+- Python 3.13
+- AWS account with CDK bootstrap completed in `eu-north-1`
+
+**External dependencies**
+- [DuckDNS](https://www.duckdns.org) — provides a stable hostname for your dynamic IP
+- AWS Lambda, DynamoDB, CloudWatch, SNS, EventBridge (all managed by the CDK stack)
+
+## Architecture
+
+```mermaid
+sequenceDiagram
+    participant Pi as Raspberry Pi
+    participant Recv as piHeartbeatReceiver (Lambda)
+    participant DB as DynamoDB
+    participant CW as CloudWatch
+    participant Check as piReachabilityChecker (Lambda)
+    participant Duck as DuckDNS (DNS)
+    participant Node as Bitcoin Node :8333
+    participant SNS as SNS → Email
+
+    loop Every hour (cron)
+        Pi->>Recv: POST /heartbeat {source: lasvegas}
+        Recv->>DB: put_item {source, timestamp}
+        Recv->>CW: PutMetricData HeartbeatReceived=1
+    end
+
+    loop Every hour (EventBridge)
+        Check->>Duck: DNS lookup you-monkey.duckdns.org
+        Duck-->>Check: current IP
+        Check->>Node: TCP connect + Bitcoin version message
+        Node-->>Check: verack
+        Check->>CW: PutMetricData NodeReachable=1 (or 0)
+    end
+
+    CW->>SNS: ALARM after 6h of missing/failed data
+    CW->>SNS: OK when signal recovers
+```
+
+## Configuration
+
+The Pi reads `config.toml` at runtime. There are no secrets in this file — it only contains URLs.
+
+```toml
+[bitcoin.reachability]
+heartbeat_endpoint = "https://<id>.lambda-url.eu-north-1.on.aws/"
+```
+
+`heartbeat_endpoint` comes from the `HeartbeatReceiverUrl` CloudFormation stack output after deploying. All other settings (DuckDNS hostname, Bitcoin port, alarm thresholds, alert email) live in the CDK stack (`aws/stacks/bitcoin_monitor_stack.py`).
+
+## Install & run
+
 ```bash
 cd ~/bitcoin-node-watchdog
 python -m venv .venv
@@ -18,43 +75,55 @@ source .venv/bin/activate
 pip install -e .
 ```
 
-**Configure** `config.toml` — set `heartbeat_endpoint` to the URL from the CloudFormation stack output (see AWS setup below):
-```toml
-[bitcoin.reachability]
-service_endpoint   = "https://bitnodes.io/api/v1/nodes/me-8333/"
-heartbeat_endpoint = "https://<id>.lambda-url.eu-central-1.on.aws/"
-```
-
-**Run manually:**
+Run once manually:
 ```bash
 python -m bitcoin_reachability
 ```
 
-**Run on a schedule** — add to crontab (`crontab -e`):
-```
-*/5 * * * * /home/pi/bitcoin-node-watchdog/.venv/bin/python -m bitcoin_reachability
+## Development
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+pytest
 ```
 
-## AWS setup (one-time)
+The Pi package has no dependency on AWS at runtime beyond the heartbeat HTTP POST — you can test it locally by pointing `heartbeat_endpoint` at any HTTP listener (e.g. `python -m http.server`).
+
+The Lambda functions use only Python standard library + `boto3` (built into the Lambda runtime), so they can be unit-tested without deployment.
+
+## Deployment
+
+### Pi — cron job
+
+Add to crontab (`crontab -e`) to send a heartbeat every hour:
+```
+0 * * * * /home/pi/bitcoin-node-watchdog/.venv/bin/python -m bitcoin_reachability
+```
+
+### AWS — one-time setup
 
 **1. Bootstrap CDK** (once per account/region):
 ```bash
 cd aws
 pip install -r requirements.txt
 npm install -g aws-cdk
-cdk bootstrap aws://ACCOUNT_ID/eu-central-1
+cdk bootstrap aws://YOUR_ACCOUNT_ID/eu-north-1
 ```
 
-**2. Configure GitHub OIDC** so GitHub Actions can assume an AWS role without stored credentials:
+**2. Configure GitHub OIDC** so GitHub Actions can deploy without stored credentials:
 - AWS Console → IAM → Identity Providers → Add provider
   - Type: OpenID Connect
   - URL: `https://token.actions.githubusercontent.com`
   - Audience: `sts.amazonaws.com`
-- Create IAM Role `GitHubActionsDeployRole` with this trust policy:
+- Create IAM Role `GitHubActionsDeployRole` with trust policy:
   ```json
   {
     "Effect": "Allow",
-    "Principal": { "Federated": "arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com" },
+    "Principal": {
+      "Federated": "arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
+    },
     "Action": "sts:AssumeRoleWithWebIdentity",
     "Condition": {
       "StringEquals": {
@@ -64,18 +133,15 @@ cdk bootstrap aws://ACCOUNT_ID/eu-central-1
     }
   }
   ```
-- Attach permissions for CloudFormation, Lambda, DynamoDB, SES, IAM, and EventBridge
+- Attach permissions: `AWSCloudFormationFullAccess`, `AWSLambda_FullAccess`, `AmazonDynamoDBFullAccess`, `AmazonSNSFullAccess`, `CloudWatchFullAccess`, `AmazonEventBridgeFullAccess`, `IAMFullAccess`
 
-**3. Verify SES sender** in eu-central-1:
-- AWS Console → SES → Verified identities → Verify `home.lasvegas.fullnode@gmail.com`
-
-**4. Add GitHub secret:**
+**3. Add GitHub secret:**
 - Repo Settings → Secrets and variables → Actions → New secret
 - Name: `AWS_ACCOUNT_ID`, value: your 12-digit AWS account ID
 
-**5. Deploy:**
+**4. Deploy:**
 
-Push any change to `aws/**` on `main` — GitHub Actions will run `cdk deploy` automatically.
+Push any change under `aws/` to `main` — GitHub Actions runs `cdk deploy` automatically.
 
 Or deploy manually:
 ```bash
@@ -83,27 +149,49 @@ cd aws
 cdk deploy
 ```
 
-**6. Update `config.toml`** with the `HeartbeatReceiverUrl` from the CloudFormation stack outputs.
+**5. Confirm SNS email subscription:**
 
-## Dev/test
+After the first deploy, AWS sends a confirmation email to `jan.rothen@gmail.com`. Click the confirmation link — no alerts will be delivered until this is done.
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-pytest
-```
+**6. Update `config.toml`** on the Pi with the `HeartbeatReceiverUrl` from the CloudFormation stack outputs.
+
+### AWS resources created
+
+All resources live in the `BitcoinMonitorStack` CloudFormation stack (visible in AWS Console → CloudFormation → eu-north-1):
+
+| Resource | Purpose |
+|---|---|
+| `piHeartbeatReceiver` Lambda | Receives POST from Pi, writes to DynamoDB, emits CloudWatch metric |
+| `piReachabilityChecker` Lambda | Hourly Bitcoin P2P handshake check via DuckDNS, emits CloudWatch metric |
+| `PiHeartbeats` DynamoDB table | Raw heartbeat storage (retained on stack deletion) |
+| `BitcoinNodeAlerts` SNS topic | Delivers alarm and recovery emails |
+| `BitcoinNode-HeartbeatMissing` CloudWatch alarm | Fires after 6h of missing heartbeats |
+| `BitcoinNode-NotReachable` CloudWatch alarm | Fires after 6h of failed reachability checks |
+| EventBridge rule | Triggers reachability checker every hour |
 
 ## Troubleshooting
 
-| Symptom | Likely cause | Fix |
-|---------|--------------|-----|
-| No heartbeat received, node appears reachable | `heartbeat_endpoint` in `config.toml` is wrong or empty | Update with `HeartbeatReceiverUrl` from CloudFormation outputs |
-| Alert email never arrives | SES sender address not verified | Verify the sender in AWS SES → Verified identities |
-| `cdk deploy` fails with auth error | GitHub OIDC role or `AWS_ACCOUNT_ID` secret misconfigured | Re-check IAM trust policy and secret value |
-| `python -m bitcoin_reachability` exits with HTTP error | bitnodes.io `service_endpoint` unreachable or node not yet synced | Confirm the node is fully synced and port 8333 is open |
-| Cron job not running | Wrong Python path in crontab | Use absolute path: `/home/pi/bitcoin-node-watchdog/.venv/bin/python` |
-| Watchdog fires but node is actually fine | Heartbeat Lambda timeout too short | Increase `SILENCE_THRESHOLD_MINUTES` in the CDK stack and redeploy |
+| Symptom | Likely cause |
+|---|---|
+| No alert email ever arrives | SNS subscription not confirmed — check inbox for the confirmation link |
+| Alert fires but node is actually fine | bitnodes handshake timing out due to slow node startup; wait for full sync |
+| `cdk deploy` fails with auth error | OIDC role misconfigured or `AWS_ACCOUNT_ID` secret wrong — re-check IAM trust policy |
+| `python -m bitcoin_reachability` exits silently | `heartbeat_endpoint` in `config.toml` not set — update with CloudFormation output URL |
+| Cron job not running | Wrong Python path — use absolute path: `/home/pi/bitcoin-node-watchdog/.venv/bin/python` |
+| CloudWatch alarms stuck in INSUFFICIENT_DATA | No data yet — wait up to 1h for the first Lambda invocations |
+| Alarm fires every hour instead of once | OK action not set on alarm — redeploy the CDK stack |
+| DuckDNS lookup returns stale IP | DDNS update cron (`ddns-update-monkey`) not running on Pi — check that cron job |
+
+## Security
+
+- `config.toml` contains no secrets — it is safe to commit
+- The heartbeat Lambda URL has no authentication; rate limiting is handled by AWS
+- Never commit AWS credentials — the deployment uses OIDC (no stored keys)
+- The `AWS_ACCOUNT_ID` GitHub secret is a 12-digit number, not a credential, but keep it private
+
+## Contributing
+
+Found a bug or have an idea? Open an issue or send a PR. Run `pytest` before submitting and keep changes focused.
 
 ## License
 
