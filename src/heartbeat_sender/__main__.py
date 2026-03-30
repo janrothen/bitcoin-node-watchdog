@@ -17,7 +17,7 @@ def check():
 
 def post_heartbeat():
     cfg = config()
-    endpoint = cfg["bitcoin"]["reachability"]["heartbeat_endpoint"]
+    endpoint = cfg["heartbeat"]["receiver"]["endpoint"]
     try:
         r = requests.post(endpoint, json={"source": "lasvegas"})
         if r.status_code not in (200, 201):

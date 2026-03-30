@@ -1,2 +1,3 @@
-[bitcoin.reachability]
-heartbeat_endpoint = "REPLACE_with_cdk_stack_output_url"
+[heartbeat.receiver]
+# Lambda function URL — output of `cdk deploy` (HeartbeatReceiverUrl)
+endpoint = "https://at6h5e54fr4e4kumaytbawg5te0gzawc.lambda-url.eu-north-1.on.aws/"
