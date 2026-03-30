@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths: ['aws/**']
+  workflow_dispatch:
 
 permissions:
   id-token: write
