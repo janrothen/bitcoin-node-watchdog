@@ -38,7 +38,7 @@ sequenceDiagram
     participant SNS as SNS → Email
 
     loop Every hour (cron)
-        Pi->>Recv: POST /heartbeat {source: lasvegas}
+        Pi->>Recv: POST /heartbeat {source, sent_at} + X-Heartbeat-Signature-256
         Recv->>DB: put_item {source, timestamp}
         Recv->>CW: PutMetricData HeartbeatReceived=1
     end
@@ -64,7 +64,7 @@ The Pi reads `config.toml` at runtime. There are no secrets in this file — it 
 endpoint = "https://<id>.lambda-url.eu-north-1.on.aws/"
 ```
 
-`heartbeat_endpoint` comes from the `HeartbeatReceiverUrl` CloudFormation stack output after deploying. All other settings (DuckDNS hostname, Bitcoin port, alarm thresholds, alert email) live in the CDK stack (`aws/stacks/bitcoin_monitor_stack.py`).
+`heartbeat.receiver.endpoint` comes from the `HeartbeatReceiverUrl` CloudFormation stack output after deploying. All other settings (DuckDNS hostname, Bitcoin port, alarm thresholds, alert email) live in the CDK stack (`aws/stacks/bitcoin_monitor_stack.py`).
 
 ## Credentials (`.env`)
 
@@ -103,7 +103,7 @@ pip install -e ".[dev]"
 pytest
 ```
 
-The Pi package has no dependency on AWS at runtime beyond the heartbeat HTTP POST — you can test it locally by pointing `heartbeat_endpoint` at any HTTP listener (e.g. `python -m http.server`).
+The Pi package has no dependency on AWS at runtime beyond the heartbeat HTTP POST — you can test it locally by pointing `heartbeat.receiver.endpoint` at any tool that accepts POST and returns 200 (e.g. [httpbin.org](https://httpbin.org/post) or a local mock server).
 
 ### Smoke testing the live endpoint
 
@@ -124,6 +124,16 @@ Requires only `requests` (installed with `pip install -e .`) and reads the endpo
 The Lambda functions use only Python standard library + `boto3` (built into the Lambda runtime), so they can be unit-tested without deployment.
 
 ## Deployment
+
+### First-deploy checklist
+
+- [ ] Bootstrap CDK (once per account/region)
+- [ ] Configure GitHub OIDC and create `GitHubActionsDeployRole`
+- [ ] Add `AWS_ACCOUNT_ID` and `HEARTBEAT_SECRET` GitHub secrets
+- [ ] Push to `main` → GitHub Actions runs `cdk deploy`
+- [ ] Confirm SNS subscription email
+- [ ] Update `config.toml` on the Pi with `HeartbeatReceiverUrl`
+- [ ] Run `HEARTBEAT_SECRET=<secret> python scripts/smoke_test.py` — both lines should show `PASS`
 
 ### Pi — cron job
 
@@ -179,9 +189,15 @@ cdk deploy --context heartbeat_secret=<your-secret>
 
 **5. Confirm SNS email subscription:**
 
-After the first deploy, AWS sends a confirmation email to `jan.rothen@gmail.com`. Click the confirmation link — no alerts will be delivered until this is done.
+After the first deploy, AWS sends a confirmation email to the address configured in the CDK stack. Click the confirmation link — no alerts will be delivered until this is done.
 
 **6. Update `config.toml`** on the Pi with the `HeartbeatReceiverUrl` from the CloudFormation stack outputs.
+
+**7. Verify the endpoint:**
+```bash
+HEARTBEAT_SECRET=<your-secret> python scripts/smoke_test.py
+```
+Expected: `[PASS] No auth → 401` and `[PASS] Valid signature → 200`.
 
 ### AWS resources created
 
@@ -204,7 +220,8 @@ All resources live in the `BitcoinMonitorStack` CloudFormation stack (visible in
 | No alert email ever arrives | SNS subscription not confirmed — check inbox for the confirmation link |
 | Alert fires but node is actually fine | bitnodes handshake timing out due to slow node startup; wait for full sync |
 | `cdk deploy` fails with auth error | OIDC role misconfigured or `AWS_ACCOUNT_ID` secret wrong — re-check IAM trust policy |
-| `python -m heartbeat_sender` exits silently | `heartbeat_endpoint` in `config.toml` not set — update with CloudFormation output URL |
+| `python -m heartbeat_sender` exits silently | `heartbeat.receiver.endpoint` in `config.toml` not set — update with CloudFormation output URL |
+| Heartbeat sender gets 401 | `HEARTBEAT_SECRET` on the Pi doesn't match the secret used during `cdk deploy` — re-check both and redeploy if needed |
 | Cron job not running | Wrong Python path — use absolute path: `/home/pi/bitcoin-node-watchdog/.venv/bin/python` |
 | CloudWatch alarms stuck in INSUFFICIENT_DATA | No data yet — wait up to 1h for the first Lambda invocations |
 | Alarm fires every hour instead of once | OK action not set on alarm — redeploy the CDK stack |
