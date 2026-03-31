@@ -105,6 +105,22 @@ pytest
 
 The Pi package has no dependency on AWS at runtime beyond the heartbeat HTTP POST — you can test it locally by pointing `heartbeat_endpoint` at any HTTP listener (e.g. `python -m http.server`).
 
+### Smoke testing the live endpoint
+
+After deploying, verify the Lambda endpoint rejects unauthenticated requests and accepts valid ones:
+
+```bash
+HEARTBEAT_SECRET=<your-secret> python scripts/smoke_test.py
+```
+
+Expected output:
+```
+[PASS] No auth → 401
+[PASS] Valid signature → 200
+```
+
+Requires only `requests` (installed with `pip install -e .`) and reads the endpoint from `config.toml`.
+
 The Lambda functions use only Python standard library + `boto3` (built into the Lambda runtime), so they can be unit-tested without deployment.
 
 ## Deployment
@@ -197,7 +213,7 @@ All resources live in the `BitcoinMonitorStack` CloudFormation stack (visible in
 ## Security
 
 - `config.toml` contains no secrets — it is safe to commit
-- Requests are authenticated with a shared secret (`X-Heartbeat-Token` header); the receiver rejects tokens older than 90 seconds
+- Requests are authenticated with HMAC-SHA256: the sender computes `HMAC(secret, sent_at)` and sends the hex digest as `X-Heartbeat-Signature-256` — the secret is never transmitted in plaintext. Each signature is single-use, bound to its timestamp, and the receiver rejects requests older than 90 seconds
 - Never commit AWS credentials — the deployment uses OIDC (no stored keys)
 - The `AWS_ACCOUNT_ID` GitHub secret is a 12-digit number, not a credential, but keep it private
 
