@@ -29,7 +29,6 @@ from aws_cdk import (
 )
 from constructs import Construct
 
-ALERT_EMAIL = "jan.rothen@gmail.com"
 CHECK_PERIOD = Duration.hours(1)
 EVAL_PERIODS = 6  # 6 × 1h = alarm after 6h of continuous failure
 
@@ -38,21 +37,29 @@ class BitcoinMonitorStack(cdk.Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        # ── SNS topic → email ─────────────────────────────────────────────────
-        alert_topic = sns.Topic(
-            self,
-            "BitcoinAlerts",
-            topic_name="BitcoinNodeAlerts",
-        )
-        alert_topic.add_subscription(sns_subscriptions.EmailSubscription(ALERT_EMAIL))
+        alert_email = self.node.try_get_context("alert_email")
+        if not alert_email:
+            raise ValueError(
+                "CDK context value 'alert_email' is required. "
+                "Pass it with: cdk deploy --context alert_email=<email>"
+            )
 
-        # ── Heartbeat receiver (Pi → Lambda → CloudWatch) ────────────────────
         heartbeat_secret = self.node.try_get_context("heartbeat_secret")
         if not heartbeat_secret:
             raise ValueError(
                 "CDK context value 'heartbeat_secret' is required. "
                 "Pass it with: cdk deploy --context heartbeat_secret=<secret>"
             )
+
+        # ── SNS topic → email ─────────────────────────────────────────────────
+        alert_topic = sns.Topic(
+            self,
+            "BitcoinAlerts",
+            topic_name="BitcoinNodeAlerts",
+        )
+        alert_topic.add_subscription(sns_subscriptions.EmailSubscription(alert_email))
+
+        # ── Heartbeat receiver (Pi → Lambda → CloudWatch) ────────────────────
 
         node_id = self.node.try_get_context("node_id")
         if not node_id:
