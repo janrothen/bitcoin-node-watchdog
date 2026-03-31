@@ -15,7 +15,7 @@ CONFIG = {"heartbeat": {"receiver": {"endpoint": ENDPOINT}}}
 _ENV = {"HEARTBEAT_SECRET": "test-secret"}
 
 
-def _mock_response(status_code, text=""):
+def _mock_response(status_code: int, text: str = "") -> MagicMock:
     r = MagicMock()
     r.status_code = status_code
     r.text = text
