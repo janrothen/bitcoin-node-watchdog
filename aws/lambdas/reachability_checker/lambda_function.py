@@ -11,8 +11,10 @@ CLOUDWATCH = boto3.client("cloudwatch")
 NAMESPACE = "BitcoinNode"
 DIMENSION = {"Name": "NodeId", "Value": os.environ["NODE_ID"]}
 
+type Response = dict[str, int | str]
 
-def lambda_handler(event, context):
+
+def lambda_handler(event: dict, context: object) -> Response:
     hostname = os.environ["DUCKDNS_HOSTNAME"]
     port = int(os.environ.get("BITCOIN_PORT", "8333"))
     reachable = _check(hostname, port)
