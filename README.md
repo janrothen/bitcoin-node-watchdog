@@ -74,7 +74,7 @@ cp .env.example .env
 
 ```dotenv
 HEARTBEAT_SECRET=your-shared-secret
-NODE_ID=lasvegas
+NODE_ID=your-bitcoin-fullnode-id
 ```
 
 `HEARTBEAT_SECRET` — shared secret used to sign heartbeats. Generate one with:
@@ -133,7 +133,7 @@ The Lambda functions use only Python standard library + `boto3` (built into the 
 
 - [ ] Bootstrap CDK (once per account/region)
 - [ ] Configure GitHub OIDC and create `GitHubActionsDeployRole`
-- [ ] Add `AWS_ACCOUNT_ID` and `HEARTBEAT_SECRET` GitHub secrets
+- [ ] Add `AWS_ACCOUNT_ID`, `HEARTBEAT_SECRET`, and `NODE_ID` GitHub secrets
 - [ ] Push to `main` → GitHub Actions runs `cdk deploy`
 - [ ] Confirm SNS subscription email
 - [ ] Update `config.toml` on the Pi with `HeartbeatReceiverUrl`
@@ -174,12 +174,13 @@ cdk bootstrap aws://YOUR_ACCOUNT_ID/eu-north-1
     }
   }
   ```
-- Attach permissions: `AWSCloudFormationFullAccess`, `AWSLambda_FullAccess`, `AmazonDynamoDBFullAccess`, `AmazonSNSFullAccess`, `CloudWatchFullAccess`, `AmazonEventBridgeFullAccess`, `IAMFullAccess`
+- Attach permissions: `AWSCloudFormationFullAccess`, `AWSLambda_FullAccess`, `AmazonSNSFullAccess`, `CloudWatchFullAccess`, `AmazonEventBridgeFullAccess`, `IAMFullAccess`
 
 **3. Add GitHub secrets:**
 - Repo Settings → Secrets and variables → Actions → New secret
 - Name: `AWS_ACCOUNT_ID`, value: your 12-digit AWS account ID
 - Name: `HEARTBEAT_SECRET`, value: same secret as your Pi's `.env` file
+- Name: `NODE_ID`, value: same node ID as your Pi's `.env` file (e.g. `lasvegas`)
 
 **4. Deploy:**
 
@@ -188,7 +189,7 @@ Push any change under `aws/` to `main` — GitHub Actions runs `cdk deploy` auto
 Or deploy manually:
 ```bash
 cd aws
-cdk deploy --context heartbeat_secret=<your-secret>
+cdk deploy --context heartbeat_secret=<your-secret> --context node_id=<your-node-id>
 ```
 
 **5. Confirm SNS email subscription:**
