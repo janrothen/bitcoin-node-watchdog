@@ -53,17 +53,6 @@ def test_missing_source_defaults_to_unknown(mock_cw):
 
 
 @patch.object(lf, "cloudwatch")
-def test_empty_json_body_defaults_to_unknown(mock_cw):
-    sent_at = datetime.now(UTC).isoformat()
-    event = {
-        "headers": _make_headers(sent_at),
-        "body": json.dumps({"sent_at": sent_at}),
-    }
-    result = lf.lambda_handler(event, None)
-    assert result == {"statusCode": 200, "body": "ok"}
-
-
-@patch.object(lf, "cloudwatch")
 def test_malformed_json_returns_400(mock_cw):
     event = {"headers": {}, "body": "not-json"}
     result = lf.lambda_handler(event, None)
@@ -100,10 +89,12 @@ def test_wrong_token_returns_401(mock_cw):
 
 
 @patch.object(lf, "cloudwatch")
-def test_missing_sent_at_returns_400(mock_cw):
+def test_missing_sent_at_returns_401(mock_cw):
+    # Missing sent_at is indistinguishable from a bad signature to unauthenticated
+    # callers — both return 401 to prevent field-name probing.
     event = {"headers": {}, "body": json.dumps({"source": "lasvegas"})}
     result = lf.lambda_handler(event, None)
-    assert result == {"statusCode": 400, "body": "missing sent_at"}
+    assert result == {"statusCode": 401, "body": "unauthorized"}
     mock_cw.put_metric_data.assert_not_called()
 
 

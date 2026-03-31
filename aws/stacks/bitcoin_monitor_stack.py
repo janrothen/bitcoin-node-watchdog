@@ -27,6 +27,9 @@ from aws_cdk import (
 from aws_cdk import (
     aws_sns_subscriptions as sns_subscriptions,
 )
+from aws_cdk import (
+    aws_sqs as sqs,
+)
 from constructs import Construct
 
 CHECK_PERIOD = Duration.hours(1)
@@ -75,6 +78,10 @@ class BitcoinMonitorStack(cdk.Stack):
                 "Pass it with: cdk deploy --context ip_provider_hostname=<hostname>"
             )
 
+        # Note: the secret is stored as a Lambda env var (KMS-encrypted at rest
+        # by AWS). For a production deployment, prefer SSM Parameter Store
+        # (SecureString) or Secrets Manager to avoid exposure in the console
+        # and CloudFormation templates.
         receiver = lambda_.Function(
             self,
             "HeartbeatReceiver",
@@ -98,6 +105,12 @@ class BitcoinMonitorStack(cdk.Stack):
         )
 
         # ── Reachability checker (EventBridge → Lambda → CloudWatch) ─────────
+        checker_dlq = sqs.Queue(
+            self,
+            "ReachabilityCheckerDLQ",
+            queue_name="piReachabilityCheckerDLQ",
+            retention_period=Duration.days(14),
+        )
         checker = lambda_.Function(
             self,
             "ReachabilityChecker",
@@ -105,7 +118,9 @@ class BitcoinMonitorStack(cdk.Stack):
             runtime=lambda_.Runtime.PYTHON_3_13,
             handler="lambda_function.lambda_handler",
             code=lambda_.Code.from_asset("lambdas/reachability_checker"),
-            timeout=Duration.seconds(25),
+            # 10s TCP connect + 10s verack wait + DNS + overhead → 30s is safe
+            timeout=Duration.seconds(30),
+            dead_letter_queue=checker_dlq,
             environment={
                 "IP_PROVIDER_HOSTNAME": ip_provider_hostname,
                 "BITCOIN_PORT": "8333",

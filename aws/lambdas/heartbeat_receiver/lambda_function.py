@@ -23,24 +23,14 @@ def _parse_body(event: dict) -> tuple[dict, None] | tuple[None, Response]:
         return None, {"statusCode": 400, "body": "invalid json"}
 
 
-def _parse_sent_at(
-    body: dict,
-) -> tuple[str, datetime, None] | tuple[None, None, Response]:
-    """Returns (sent_at_raw, sent_at_datetime, error_response)."""
-    sent_at_raw = body.get("sent_at")
+def _verify_signature(event: dict, sent_at_raw: str | None) -> Response | None:
+    """Returns error_response or None if the signature is valid.
+
+    Missing sent_at is treated as an auth failure so unauthenticated callers
+    cannot probe field names via different error codes.
+    """
     if not sent_at_raw:
-        return None, None, {"statusCode": 400, "body": "missing sent_at"}
-    try:
-        sent_at = datetime.fromisoformat(sent_at_raw)
-        if sent_at.tzinfo is None:
-            sent_at = sent_at.replace(tzinfo=UTC)
-        return sent_at_raw, sent_at, None
-    except ValueError:
-        return None, None, {"statusCode": 400, "body": "invalid sent_at"}
-
-
-def _verify_signature(event: dict, sent_at_raw: str) -> Response | None:
-    """Returns error_response or None if the signature is valid."""
+        return {"statusCode": 401, "body": "unauthorized"}
     headers = event.get("headers") or {}
     token = headers.get(_SIGNATURE_HEADER.lower()) or headers.get(_SIGNATURE_HEADER)
     expected = hmac.new(
@@ -49,6 +39,17 @@ def _verify_signature(event: dict, sent_at_raw: str) -> Response | None:
     if not token or not hmac.compare_digest(token, expected):
         return {"statusCode": 401, "body": "unauthorized"}
     return None
+
+
+def _parse_sent_at(sent_at_raw: str) -> tuple[datetime, None] | tuple[None, Response]:
+    """Returns (sent_at_datetime, error_response)."""
+    try:
+        sent_at = datetime.fromisoformat(sent_at_raw)
+        if sent_at.tzinfo is None:
+            sent_at = sent_at.replace(tzinfo=UTC)
+        return sent_at, None
+    except ValueError:
+        return None, {"statusCode": 400, "body": "invalid sent_at"}
 
 
 def _check_freshness(sent_at: datetime) -> Response | None:
@@ -77,11 +78,14 @@ def lambda_handler(event: dict, context: object) -> Response:
     if err:
         return err
 
-    sent_at_raw, sent_at, err = _parse_sent_at(body)
+    # Verify auth before any further validation — prevents unauthenticated callers
+    # from probing field names via different error codes.
+    sent_at_raw = body.get("sent_at")
+    err = _verify_signature(event, sent_at_raw)
     if err:
         return err
 
-    err = _verify_signature(event, sent_at_raw)
+    sent_at, err = _parse_sent_at(sent_at_raw)
     if err:
         return err
 
@@ -89,5 +93,6 @@ def lambda_handler(event: dict, context: object) -> Response:
     if err:
         return err
 
-    _record_heartbeat(body.get("source", "unknown"))
+    source = str(body.get("source") or "unknown")[:256]
+    _record_heartbeat(source)
     return {"statusCode": 200, "body": "ok"}
