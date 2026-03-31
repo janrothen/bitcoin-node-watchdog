@@ -14,6 +14,8 @@ import requests
 
 from .config import config
 
+_SIGNATURE_HEADER = "X-Heartbeat-Signature-256"
+
 
 def check():
     post_heartbeat()
@@ -37,7 +39,7 @@ def post_heartbeat():
         "sent_at": sent_at,
     }
     signature = create_signature(secret, sent_at)
-    headers = {"X-Heartbeat-Signature-256": signature}
+    headers = {_SIGNATURE_HEADER: signature}
     try:
         r = requests.post(endpoint, json=body, headers=headers)
         if r.status_code not in (200, 201):

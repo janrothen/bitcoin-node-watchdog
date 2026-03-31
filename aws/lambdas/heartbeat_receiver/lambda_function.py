@@ -9,8 +9,9 @@ import boto3
 table = boto3.resource("dynamodb").Table(os.environ["TABLE_NAME"])
 cloudwatch = boto3.client("cloudwatch")
 
-_SECRET = os.environ["HEARTBEAT_SECRET"]
 _MAX_AGE = timedelta(seconds=90)
+_SECRET = os.environ["HEARTBEAT_SECRET"]
+_SIGNATURE_HEADER = "X-Heartbeat-Signature-256"
 
 
 def _parse_body(event):
@@ -38,9 +39,7 @@ def _parse_sent_at(body):
 def _verify_signature(event, sent_at_raw):
     """Returns error_response or None if the signature is valid."""
     headers = event.get("headers") or {}
-    token = headers.get("x-heartbeat-signature-256") or headers.get(
-        "X-Heartbeat-Signature-256"
-    )
+    token = headers.get(_SIGNATURE_HEADER.lower()) or headers.get(_SIGNATURE_HEADER)
     expected = hmac.new(
         _SECRET.encode(), sent_at_raw.encode(), hashlib.sha256
     ).hexdigest()
