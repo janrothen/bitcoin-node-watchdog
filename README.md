@@ -133,7 +133,7 @@ The Lambda functions use only Python standard library + `boto3` (built into the 
 
 - [ ] Bootstrap CDK (once per account/region)
 - [ ] Configure GitHub OIDC and create `GitHubActionsDeployRole`
-- [ ] Add `AWS_ACCOUNT_ID`, `HEARTBEAT_SECRET`, and `NODE_ID` GitHub secrets
+- [ ] Add `AWS_ACCOUNT_ID`, `HEARTBEAT_SECRET`, `NODE_ID`, and `ALERT_EMAIL` GitHub secrets
 - [ ] Push to `main` → GitHub Actions runs `cdk deploy`
 - [ ] Confirm SNS subscription email
 - [ ] Update `config.toml` on the Pi with `HeartbeatReceiverUrl`
@@ -181,6 +181,7 @@ cdk bootstrap aws://YOUR_ACCOUNT_ID/eu-north-1
 - Name: `AWS_ACCOUNT_ID`, value: your 12-digit AWS account ID
 - Name: `HEARTBEAT_SECRET`, value: same secret as your Pi's `.env` file
 - Name: `NODE_ID`, value: same node ID as your Pi's `.env` file (e.g. `lasvegas`)
+- Name: `ALERT_EMAIL`, value: email address to receive alarm and recovery notifications
 
 **4. Deploy:**
 
@@ -189,7 +190,7 @@ Push any change under `aws/` to `main` — GitHub Actions runs `cdk deploy` auto
 Or deploy manually:
 ```bash
 cd aws
-cdk deploy --context heartbeat_secret=<your-secret> --context node_id=<your-node-id>
+cdk deploy --context heartbeat_secret=<your-secret> --context node_id=<your-node-id> --context alert_email=<your-email>
 ```
 
 **5. Confirm SNS email subscription:**
