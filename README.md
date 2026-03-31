@@ -127,6 +127,22 @@ Requires only `requests` (installed with `pip install -e .`) and reads the endpo
 
 The Lambda functions use only Python standard library + `boto3` (built into the Lambda runtime), so they can be unit-tested without deployment.
 
+### Testing the full pipeline manually
+
+Force the `HeartbeatMissing` alarm into ALARM state to verify an alert email arrives:
+
+```bash
+bash scripts/test_alarm.sh
+```
+
+Then reset it back to OK to verify the recovery email:
+
+```bash
+bash scripts/test_recovery.sh
+```
+
+Requires AWS CLI configured with credentials that have `cloudwatch:SetAlarmState` permission.
+
 ## Deployment
 
 ### First-deploy checklist
