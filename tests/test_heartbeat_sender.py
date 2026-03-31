@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 import os
 from datetime import datetime
 from unittest.mock import MagicMock, patch
@@ -31,7 +33,11 @@ def test_post_heartbeat_success_200(mock_config, mock_post, capsys):
     assert call.args[0] == ENDPOINT
     assert call.kwargs["json"]["source"] == "lasvegas"
     assert "sent_at" in call.kwargs["json"]
-    assert call.kwargs["headers"]["X-Heartbeat-Token"] == "test-secret"
+    sent_at = call.kwargs["json"]["sent_at"]
+    expected_token = hmac.new(
+        b"test-secret", sent_at.encode(), hashlib.sha256
+    ).hexdigest()
+    assert call.kwargs["headers"]["X-Heartbeat-Signature-256"] == expected_token
     assert "Heartbeat sent." in capsys.readouterr().out
 
 
@@ -88,7 +94,10 @@ def test_post_heartbeat_sends_auth_header_and_timestamp(mock_config, mock_post):
     headers = call.kwargs["headers"]
     body = call.kwargs["json"]
 
-    assert headers["X-Heartbeat-Token"] == "test-secret"
+    expected_token = hmac.new(
+        b"test-secret", body["sent_at"].encode(), hashlib.sha256
+    ).hexdigest()
+    assert headers["X-Heartbeat-Signature-256"] == expected_token
     assert "sent_at" in body
     dt = datetime.fromisoformat(body["sent_at"])
     assert dt.tzinfo is not None  # must be timezone-aware

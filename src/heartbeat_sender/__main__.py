@@ -3,6 +3,8 @@
 # Sends a heartbeat to AWS every hour so the watchdog knows the Pi is alive.
 # Reachability of the Bitcoin node is checked independently by a Lambda on AWS.
 
+import hashlib
+import hmac
 import os
 import sys
 import traceback
@@ -17,15 +19,25 @@ def check():
     post_heartbeat()
 
 
+def create_signature(secret: str, sent_at: str) -> str:
+    # HMAC-SHA256 over the sent_at timestamp so the secret is never transmitted
+    # in plaintext. Binding the signature to the timestamp also makes each
+    # heartbeat single-use: a replayed request will be rejected by the receiver's
+    # 90-second freshness check.
+    return hmac.new(secret.encode(), sent_at.encode(), hashlib.sha256).hexdigest()
+
+
 def post_heartbeat():
     cfg = config()
     endpoint = cfg["heartbeat"]["receiver"]["endpoint"]
     secret = os.environ["HEARTBEAT_SECRET"]
+    sent_at = datetime.now(UTC).isoformat()
     body = {
         "source": "lasvegas",
-        "sent_at": datetime.now(UTC).isoformat(),
+        "sent_at": sent_at,
     }
-    headers = {"X-Heartbeat-Token": secret}
+    signature = create_signature(secret, sent_at)
+    headers = {"X-Heartbeat-Signature-256": signature}
     try:
         r = requests.post(endpoint, json=body, headers=headers)
         if r.status_code not in (200, 201):

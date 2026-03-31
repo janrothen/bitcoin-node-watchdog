@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 import importlib.util
 import json
 from datetime import UTC, datetime, timedelta
@@ -11,13 +13,17 @@ spec = importlib.util.spec_from_file_location("heartbeat_receiver", _LAMBDA)
 lf = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(lf)
 
-_HEADERS = {"x-heartbeat-token": "test-secret"}
+
+def _make_headers(sent_at: str, secret: str = "test-secret") -> dict:
+    token = hmac.new(secret.encode(), sent_at.encode(), hashlib.sha256).hexdigest()
+    return {"x-heartbeat-signature-256": token}
 
 
 def _event(source="lasvegas", sent_at=None, headers=None):
-    body = {"source": source, "sent_at": sent_at or datetime.now(UTC).isoformat()}
+    sent_at_str = sent_at or datetime.now(UTC).isoformat()
+    body = {"source": source, "sent_at": sent_at_str}
     return {
-        "headers": headers if headers is not None else _HEADERS,
+        "headers": headers if headers is not None else _make_headers(sent_at_str),
         "body": json.dumps(body),
     }
 
@@ -38,9 +44,10 @@ def test_known_source(mock_table, mock_cw):
 @patch.object(lf, "cloudwatch")
 @patch.object(lf, "table")
 def test_missing_source_defaults_to_unknown(mock_table, mock_cw):
+    sent_at = datetime.now(UTC).isoformat()
     event = {
-        "headers": _HEADERS,
-        "body": json.dumps({"sent_at": datetime.now(UTC).isoformat()}),
+        "headers": _make_headers(sent_at),
+        "body": json.dumps({"sent_at": sent_at}),
     }
     lf.lambda_handler(event, None)
     item = mock_table.put_item.call_args.kwargs["Item"]
@@ -50,9 +57,10 @@ def test_missing_source_defaults_to_unknown(mock_table, mock_cw):
 @patch.object(lf, "cloudwatch")
 @patch.object(lf, "table")
 def test_empty_json_body_defaults_to_unknown(mock_table, mock_cw):
+    sent_at = datetime.now(UTC).isoformat()
     event = {
-        "headers": _HEADERS,
-        "body": json.dumps({"sent_at": datetime.now(UTC).isoformat()}),
+        "headers": _make_headers(sent_at),
+        "body": json.dumps({"sent_at": sent_at}),
     }
     lf.lambda_handler(event, None)
     item = mock_table.put_item.call_args.kwargs["Item"]
@@ -62,7 +70,7 @@ def test_empty_json_body_defaults_to_unknown(mock_table, mock_cw):
 @patch.object(lf, "cloudwatch")
 @patch.object(lf, "table")
 def test_malformed_json_returns_400(mock_table, mock_cw):
-    event = {"headers": _HEADERS, "body": "not-json"}
+    event = {"headers": {}, "body": "not-json"}
     result = lf.lambda_handler(event, None)
     assert result == {"statusCode": 400, "body": "invalid json"}
     mock_table.put_item.assert_not_called()
@@ -102,7 +110,7 @@ def test_wrong_token_returns_401(mock_table, mock_cw):
 @patch.object(lf, "cloudwatch")
 @patch.object(lf, "table")
 def test_missing_sent_at_returns_400(mock_table, mock_cw):
-    event = {"headers": _HEADERS, "body": json.dumps({"source": "lasvegas"})}
+    event = {"headers": {}, "body": json.dumps({"source": "lasvegas"})}
     result = lf.lambda_handler(event, None)
     assert result == {"statusCode": 400, "body": "missing sent_at"}
     mock_table.put_item.assert_not_called()
