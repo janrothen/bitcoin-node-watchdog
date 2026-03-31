@@ -102,7 +102,7 @@ class BitcoinMonitorStack(cdk.Stack):
             environment={
                 "DUCKDNS_HOSTNAME": "you-monkey.duckdns.org",
                 "BITCOIN_PORT": "8333",
-                "node_id": node_id,
+                "NODE_ID": node_id,
             },
         )
         checker.add_to_role_policy(
