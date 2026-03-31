@@ -16,15 +16,25 @@ src/heartbeat_sender/       # installable package
   config.py                 # loads config.toml and .env
 scripts/
   smoke_test.py             # manual post-deploy verification (401 + 200 check)
+  test_alarm.sh             # manually trigger ALARM state for pipeline testing
+  test_recovery.sh          # manually trigger OK state for pipeline testing
 aws/                        # CDK infrastructure (deployed via GitHub Actions)
   app.py
+  cdk.json
+  requirements.txt
   stacks/bitcoin_monitor_stack.py
   lambdas/
     heartbeat_receiver/     # POST from Pi → DynamoDB + CloudWatch metric
     reachability_checker/   # EventBridge hourly → Bitcoin P2P check → CloudWatch metric
+etc/
+  cron.d/bitcoin-node-watchdog  # cron job for Pi (runs heartbeat_sender hourly)
 .github/workflows/
   deploy-aws.yml            # push to main → cdk deploy (eu-north-1)
 tests/
+  conftest.py
+  test_heartbeat_receiver.py
+  test_heartbeat_sender.py
+  test_reachability_checker.py
 config.toml                 # runtime config (heartbeat URL only)
 pyproject.toml              # packaging and dependencies
 ```
