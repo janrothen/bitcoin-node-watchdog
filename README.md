@@ -74,9 +74,15 @@ cp .env.example .env
 
 ```dotenv
 HEARTBEAT_SECRET=your-shared-secret
+NODE_ID=lasvegas
 ```
 
-Generate a strong secret with: `python3 -c "import secrets; print(secrets.token_hex(32))"`
+`HEARTBEAT_SECRET` — shared secret used to sign heartbeats. Generate one with:
+```bash
+python3 -c "import secrets; print(secrets.token_hex(32))"
+```
+
+`NODE_ID` — identifier for this node, used as the CloudWatch dimension and heartbeat source. Must match the value configured in the CDK stack (`NODE_ID` constant in `aws/stacks/bitcoin_monitor_stack.py`).
 
 ## Install & run
 
