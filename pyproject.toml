@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "heartbeat-sender"
 version = "0.1.0"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "requests",
     "python-dotenv",
@@ -13,7 +13,6 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "hatchling",
     "pytest>=8.0.0",
     "pre-commit>=4.0.0",
     "ruff>=0.11.2",

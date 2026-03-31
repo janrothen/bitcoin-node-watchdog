@@ -17,10 +17,6 @@ from .config import config
 _SIGNATURE_HEADER = "X-Heartbeat-Signature-256"
 
 
-def check():
-    post_heartbeat()
-
-
 def create_signature(secret: str, sent_at: str) -> str:
     # HMAC-SHA256 over the sent_at timestamp so the secret is never transmitted
     # in plaintext. Binding the signature to the timestamp also makes each
@@ -29,7 +25,7 @@ def create_signature(secret: str, sent_at: str) -> str:
     return hmac.new(secret.encode(), sent_at.encode(), hashlib.sha256).hexdigest()
 
 
-def post_heartbeat():
+def post_heartbeat() -> bool:
     cfg = config()
     endpoint = cfg["heartbeat"]["receiver"]["endpoint"]
     secret = os.environ["HEARTBEAT_SECRET"]
@@ -41,18 +37,21 @@ def post_heartbeat():
     signature = create_signature(secret, sent_at)
     headers = {_SIGNATURE_HEADER: signature}
     try:
-        r = requests.post(endpoint, json=body, headers=headers)
+        r = requests.post(endpoint, json=body, headers=headers, timeout=10)
         if r.status_code not in (200, 201):
             print(f"Failed to send heartbeat:\nCode: {r.status_code}\nResult: {r.text}")
-            return
+            return False
         print("Heartbeat sent.")
+        return True
     except requests.exceptions.RequestException as e:
         print(f"Failed to send heartbeat: {e}")
+        return False
 
 
 def run():
     try:
-        check()
+        if not post_heartbeat():
+            sys.exit(1)
     except Exception:
         traceback.print_exc(file=sys.stdout)
         sys.exit(1)
