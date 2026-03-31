@@ -62,7 +62,7 @@ The Pi reads `config.toml` at runtime. There are no secrets in this file — it 
 endpoint = "https://<id>.lambda-url.eu-north-1.on.aws/"
 ```
 
-`heartbeat.receiver.endpoint` comes from the `HeartbeatReceiverUrl` CloudFormation stack output after deploying. All other settings (DuckDNS hostname, Bitcoin port, alarm thresholds) live in the CDK stack (`aws/stacks/bitcoin_monitor_stack.py`). `alert_email`, `node_id`, and `heartbeat_secret` are passed as CDK context values at deploy time (see [Deployment](#deployment)).
+`heartbeat.receiver.endpoint` comes from the `HeartbeatReceiverUrl` CloudFormation stack output after deploying. Settings like Bitcoin port and alarm thresholds live in the CDK stack (`aws/stacks/bitcoin_monitor_stack.py`). `alert_email`, `node_id`, `heartbeat_secret`, and `ip_provider_hostname` are passed as CDK context values at deploy time (see [Deployment](#deployment)).
 
 ## Credentials (`.env`)
 
@@ -198,6 +198,7 @@ cdk bootstrap aws://YOUR_ACCOUNT_ID/eu-north-1
 - Name: `HEARTBEAT_SECRET`, value: same secret as your Pi's `.env` file
 - Name: `NODE_ID`, value: same node ID as your Pi's `.env` file (e.g. `lasvegas`)
 - Name: `ALERT_EMAIL`, value: email address to receive alarm and recovery notifications
+- Name: `IP_PROVIDER_HOSTNAME`, value: hostname that resolves to your node's public IP (e.g. `you-monkey.duckdns.org`)
 
 **4. Deploy:**
 
@@ -206,7 +207,7 @@ Push any change under `aws/` to `main` — GitHub Actions runs `cdk deploy` auto
 Or deploy manually:
 ```bash
 cd aws
-cdk deploy --context heartbeat_secret=<your-secret> --context node_id=<your-node-id> --context alert_email=<your-email>
+cdk deploy --context heartbeat_secret=<your-secret> --context node_id=<your-node-id> --context alert_email=<your-email> --context ip_provider_hostname=<your-hostname>
 ```
 
 **5. Confirm SNS email subscription:**
