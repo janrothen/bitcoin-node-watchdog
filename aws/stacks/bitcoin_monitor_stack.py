@@ -30,7 +30,6 @@ from aws_cdk import (
 from constructs import Construct
 
 ALERT_EMAIL = "jan.rothen@gmail.com"
-NODE_ID = "lasvegas"
 CHECK_PERIOD = Duration.hours(1)
 EVAL_PERIODS = 6  # 6 × 1h = alarm after 6h of continuous failure
 
@@ -53,6 +52,13 @@ class BitcoinMonitorStack(cdk.Stack):
             raise ValueError(
                 "CDK context value 'heartbeat_secret' is required. "
                 "Pass it with: cdk deploy --context heartbeat_secret=<secret>"
+            )
+
+        node_id = self.node.try_get_context("node_id")
+        if not node_id:
+            raise ValueError(
+                "CDK context value 'node_id' is required. "
+                "Pass it with: cdk deploy --context node_id=<id>"
             )
 
         receiver = lambda_.Function(
@@ -89,7 +95,7 @@ class BitcoinMonitorStack(cdk.Stack):
             environment={
                 "DUCKDNS_HOSTNAME": "you-monkey.duckdns.org",
                 "BITCOIN_PORT": "8333",
-                "NODE_ID": NODE_ID,
+                "node_id": node_id,
             },
         )
         checker.add_to_role_policy(
@@ -117,7 +123,7 @@ class BitcoinMonitorStack(cdk.Stack):
             metric = cloudwatch.Metric(
                 namespace="BitcoinNode",
                 metric_name=metric_name,
-                dimensions_map={"NodeId": NODE_ID},
+                dimensions_map={"NodeId": node_id},
                 statistic=statistic,
                 period=CHECK_PERIOD,
             )
@@ -140,7 +146,7 @@ class BitcoinMonitorStack(cdk.Stack):
         _make_alarm(
             alarm_id="HeartbeatAlarm",
             alarm_name="BitcoinNode-HeartbeatMissing",
-            description=f"No heartbeat from Pi ({NODE_ID}) for 6 hours",
+            description=f"No heartbeat from Pi ({node_id}) for 6 hours",
             metric_name="HeartbeatReceived",
             statistic="Sum",
         )
@@ -148,7 +154,7 @@ class BitcoinMonitorStack(cdk.Stack):
         _make_alarm(
             alarm_id="ReachabilityAlarm",
             alarm_name="BitcoinNode-NotReachable",
-            description=f"Bitcoin node ({NODE_ID}) unreachable from internet for 6 hours",
+            description=f"Bitcoin node ({node_id}) unreachable from internet for 6 hours",
             metric_name="NodeReachable",
             statistic="Maximum",
         )

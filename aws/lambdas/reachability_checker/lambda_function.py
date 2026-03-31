@@ -9,7 +9,7 @@ import boto3
 MAGIC = b"\xf9\xbe\xb4\xd9"  # Bitcoin mainnet magic bytes
 CLOUDWATCH = boto3.client("cloudwatch")
 NAMESPACE = "BitcoinNode"
-DIMENSION = {"Name": "NodeId", "Value": os.environ.get("NODE_ID", "lasvegas")}
+DIMENSION = {"Name": "NodeId", "Value": os.environ["NODE_ID"]}
 
 
 def lambda_handler(event, context):
