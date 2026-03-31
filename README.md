@@ -62,7 +62,7 @@ The Pi reads `config.toml` at runtime. There are no secrets in this file — it 
 endpoint = "https://<id>.lambda-url.eu-north-1.on.aws/"
 ```
 
-`heartbeat.receiver.endpoint` comes from the `HeartbeatReceiverUrl` CloudFormation stack output after deploying. All other settings (DuckDNS hostname, Bitcoin port, alarm thresholds, alert email) live in the CDK stack (`aws/stacks/bitcoin_monitor_stack.py`).
+`heartbeat.receiver.endpoint` comes from the `HeartbeatReceiverUrl` CloudFormation stack output after deploying. All other settings (DuckDNS hostname, Bitcoin port, alarm thresholds) live in the CDK stack (`aws/stacks/bitcoin_monitor_stack.py`). `alert_email`, `node_id`, and `heartbeat_secret` are passed as CDK context values at deploy time (see [Deployment](#deployment)).
 
 ## Credentials (`.env`)
 
