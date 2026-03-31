@@ -12,7 +12,7 @@ ENDPOINT = "https://example.lambda-url.eu-north-1.on.aws/"
 
 CONFIG = {"heartbeat": {"receiver": {"endpoint": ENDPOINT}}}
 
-_ENV = {"HEARTBEAT_SECRET": "test-secret"}
+_ENV = {"HEARTBEAT_SECRET": "test-secret", "NODE_ID": "lasvegas"}
 
 
 def _mock_response(status_code: int, text: str = "") -> MagicMock:

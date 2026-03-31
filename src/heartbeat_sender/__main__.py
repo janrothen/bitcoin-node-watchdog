@@ -35,7 +35,7 @@ def post_heartbeat():
     secret = os.environ["HEARTBEAT_SECRET"]
     sent_at = datetime.now(UTC).isoformat()
     body = {
-        "source": "lasvegas",
+        "source": os.environ["NODE_ID"],
         "sent_at": sent_at,
     }
     signature = create_signature(secret, sent_at)
