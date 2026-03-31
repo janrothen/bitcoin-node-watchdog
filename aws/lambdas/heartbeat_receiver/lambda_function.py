@@ -13,8 +13,10 @@ _MAX_AGE = timedelta(seconds=90)
 _SECRET = os.environ["HEARTBEAT_SECRET"]
 _SIGNATURE_HEADER = "X-Heartbeat-Signature-256"
 
+type Response = dict[str, int | str]
 
-def _parse_body(event):
+
+def _parse_body(event: dict) -> tuple[dict, None] | tuple[None, Response]:
     """Returns (body_dict, error_response) — one of which is None."""
     try:
         return json.loads(event.get("body") or "{}"), None
@@ -22,7 +24,9 @@ def _parse_body(event):
         return None, {"statusCode": 400, "body": "invalid json"}
 
 
-def _parse_sent_at(body):
+def _parse_sent_at(
+    body: dict,
+) -> tuple[str, datetime, None] | tuple[None, None, Response]:
     """Returns (sent_at_raw, sent_at_datetime, error_response)."""
     sent_at_raw = body.get("sent_at")
     if not sent_at_raw:
@@ -36,7 +40,7 @@ def _parse_sent_at(body):
         return None, None, {"statusCode": 400, "body": "invalid sent_at"}
 
 
-def _verify_signature(event, sent_at_raw):
+def _verify_signature(event: dict, sent_at_raw: str) -> Response | None:
     """Returns error_response or None if the signature is valid."""
     headers = event.get("headers") or {}
     token = headers.get(_SIGNATURE_HEADER.lower()) or headers.get(_SIGNATURE_HEADER)
@@ -48,14 +52,14 @@ def _verify_signature(event, sent_at_raw):
     return None
 
 
-def _check_freshness(sent_at):
+def _check_freshness(sent_at: datetime) -> Response | None:
     """Returns error_response or None if the timestamp is fresh."""
     if abs(datetime.now(UTC) - sent_at) > _MAX_AGE:
         return {"statusCode": 400, "body": "sent_at out of range"}
     return None
 
 
-def _record_heartbeat(source):
+def _record_heartbeat(source: str) -> None:
     table.put_item(
         Item={
             "source": source,
@@ -75,7 +79,7 @@ def _record_heartbeat(source):
     )
 
 
-def lambda_handler(event, context):
+def lambda_handler(event: dict, context: object) -> Response:
     body, err = _parse_body(event)
     if err:
         return err

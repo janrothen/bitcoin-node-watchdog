@@ -14,12 +14,16 @@ lf = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(lf)
 
 
-def _make_headers(sent_at: str, secret: str = "test-secret") -> dict:
+def _make_headers(sent_at: str, secret: str = "test-secret") -> dict[str, str]:
     token = hmac.new(secret.encode(), sent_at.encode(), hashlib.sha256).hexdigest()
     return {"x-heartbeat-signature-256": token}
 
 
-def _event(source="lasvegas", sent_at=None, headers=None):
+def _event(
+    source: str = "lasvegas",
+    sent_at: str | None = None,
+    headers: dict[str, str] | None = None,
+) -> dict:
     sent_at_str = sent_at or datetime.now(UTC).isoformat()
     body = {"source": source, "sent_at": sent_at_str}
     return {

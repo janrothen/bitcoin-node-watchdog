@@ -9,15 +9,15 @@ _PROJECT_ROOT = Path(__file__).parent.parent.parent
 load_dotenv(_PROJECT_ROOT / ".env")
 
 
-def _load():
+def _load() -> dict:
     with open(_PROJECT_ROOT / "config.toml", "rb") as f:
         return tomllib.load(f)
 
 
-_config = None
+_config: dict | None = None
 
 
-def config():
+def config() -> dict:
     global _config
     if _config is None:
         _config = _load()
