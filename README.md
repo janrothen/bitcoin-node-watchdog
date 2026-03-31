@@ -30,7 +30,6 @@ Monitors a Bitcoin full node running on a Raspberry Pi. A Python package on the 
 sequenceDiagram
     participant Pi as Raspberry Pi
     participant Recv as piHeartbeatReceiver (Lambda)
-    participant DB as DynamoDB
     participant CW as CloudWatch
     participant Check as piReachabilityChecker (Lambda)
     participant Duck as DuckDNS (DNS)
@@ -39,7 +38,6 @@ sequenceDiagram
 
     loop Every hour (cron)
         Pi->>Recv: POST /heartbeat {source, sent_at} + X-Heartbeat-Signature-256
-        Recv->>DB: put_item {source, timestamp}
         Recv->>CW: PutMetricData HeartbeatReceived=1
     end
 
@@ -205,9 +203,8 @@ All resources live in the `BitcoinMonitorStack` CloudFormation stack (visible in
 
 | Resource | Purpose |
 |---|---|
-| `piHeartbeatReceiver` Lambda | Receives POST from Pi, writes to DynamoDB, emits CloudWatch metric |
+| `piHeartbeatReceiver` Lambda | Receives POST from Pi, emits CloudWatch metric |
 | `piReachabilityChecker` Lambda | Hourly Bitcoin P2P handshake check via DuckDNS, emits CloudWatch metric |
-| `PiHeartbeats` DynamoDB table | Raw heartbeat storage (retained on stack deletion) |
 | `BitcoinNodeAlerts` SNS topic | Delivers alarm and recovery emails |
 | `BitcoinNode-HeartbeatMissing` CloudWatch alarm | Fires after 6h of missing heartbeats |
 | `BitcoinNode-NotReachable` CloudWatch alarm | Fires after 6h of failed reachability checks |
