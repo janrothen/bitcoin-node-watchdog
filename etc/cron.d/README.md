@@ -6,11 +6,11 @@ The project includes a cron file (`etc/cron.d/bitcoin-node-watchdog`) that sends
 
 ### 1. Set the repo path
 
-Update the `HOME` variable at the top of `bitcoin-node-watchdog` to match where you cloned the repo.
+Update the hardcoded path in the cron command to match where you cloned the repo (default: `/home/pi/raspberry/bitcoin-node-watchdog`).
 
 ### 2. Copy the scheduling file
 ```bash
-sudo cp bitcoin-node-watchdog /etc/cron.d/
+sudo cp etc/cron.d/bitcoin-node-watchdog /etc/cron.d/
 ```
 
 ### 3. Set proper permissions
