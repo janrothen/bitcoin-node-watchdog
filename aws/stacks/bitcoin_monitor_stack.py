@@ -2,16 +2,12 @@ import aws_cdk as cdk
 from aws_cdk import (
     CfnOutput,
     Duration,
-    RemovalPolicy,
 )
 from aws_cdk import (
     aws_cloudwatch as cloudwatch,
 )
 from aws_cdk import (
     aws_cloudwatch_actions as cloudwatch_actions,
-)
-from aws_cdk import (
-    aws_dynamodb as dynamodb,
 )
 from aws_cdk import (
     aws_events as events,
@@ -43,18 +39,6 @@ class BitcoinMonitorStack(cdk.Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        # ── DynamoDB (heartbeat raw storage, retained on stack deletion) ──────
-        table = dynamodb.Table(
-            self,
-            "PiHeartbeats",
-            table_name="PiHeartbeats",
-            partition_key=dynamodb.Attribute(
-                name="source",
-                type=dynamodb.AttributeType.STRING,
-            ),
-            removal_policy=RemovalPolicy.RETAIN,
-        )
-
         # ── SNS topic → email ─────────────────────────────────────────────────
         alert_topic = sns.Topic(
             self,
@@ -63,7 +47,7 @@ class BitcoinMonitorStack(cdk.Stack):
         )
         alert_topic.add_subscription(sns_subscriptions.EmailSubscription(ALERT_EMAIL))
 
-        # ── Heartbeat receiver (Pi → Lambda → DynamoDB + CloudWatch) ─────────
+        # ── Heartbeat receiver (Pi → Lambda → CloudWatch) ────────────────────
         heartbeat_secret = self.node.try_get_context("heartbeat_secret")
         if not heartbeat_secret:
             raise ValueError(
@@ -79,11 +63,9 @@ class BitcoinMonitorStack(cdk.Stack):
             handler="lambda_function.lambda_handler",
             code=lambda_.Code.from_asset("lambdas/heartbeat_receiver"),
             environment={
-                "TABLE_NAME": table.table_name,
                 "HEARTBEAT_SECRET": heartbeat_secret,
             },
         )
-        table.grant_write_data(receiver)
         receiver.add_to_role_policy(
             iam.PolicyStatement(
                 actions=["cloudwatch:PutMetricData"],

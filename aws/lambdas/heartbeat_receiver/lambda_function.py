@@ -6,7 +6,6 @@ from datetime import UTC, datetime, timedelta
 
 import boto3
 
-table = boto3.resource("dynamodb").Table(os.environ["TABLE_NAME"])
 cloudwatch = boto3.client("cloudwatch")
 
 _MAX_AGE = timedelta(seconds=90)
@@ -60,12 +59,6 @@ def _check_freshness(sent_at: datetime) -> Response | None:
 
 
 def _record_heartbeat(source: str) -> None:
-    table.put_item(
-        Item={
-            "source": source,
-            "timestamp": datetime.now(UTC).isoformat(),
-        }
-    )
     cloudwatch.put_metric_data(
         Namespace="BitcoinNode",
         MetricData=[
