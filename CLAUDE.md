@@ -13,7 +13,9 @@ Monitors a Bitcoin full node on Raspberry Pi. The Pi sends an hourly heartbeat t
 src/heartbeat_sender/       # installable package
   __main__.py               # entry point: python -m heartbeat_sender
                             # sends heartbeat unconditionally every hour
-  utils/
+  config.py                 # loads config.toml and .env
+scripts/
+  smoke_test.py             # manual post-deploy verification (401 + 200 check)
 aws/                        # CDK infrastructure (deployed via GitHub Actions)
   app.py
   stacks/bitcoin_monitor_stack.py
@@ -34,6 +36,7 @@ pyproject.toml              # packaging and dependencies
 - CloudWatch Alarms handle state: one email on ALARM, one on OK — no repeated alerts
 - Alarm threshold: 6 consecutive hourly periods (6 hours) of missing/failed data
 - SES replaced by SNS; SNS subscription must be confirmed after first deploy
+- Heartbeat auth: sender computes `HMAC-SHA256(secret, sent_at)` and sends the hex digest as `X-Heartbeat-Signature-256` — secret never in plaintext; receiver rejects requests older than 90 seconds
 
 ## Dev/test
 ```bash
