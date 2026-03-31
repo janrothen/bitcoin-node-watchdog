@@ -9,4 +9,4 @@ LOG=/var/log/bitcoin-node-watchdog-cron.log
 TZ=Europe/Zurich
 
 # --- Hourly heartbeat ---------------------------------------------------------
-0 * * * *  pi  cd /home/pi/raspberry/bitcoin-node-watchdog && .venv/bin/python -m heartbeat_sender >> /var/log/bitcoin-node-watchdog-cron.log 2>&1
+0 * * * *  pi  cd $HOME && .venv/bin/python -m heartbeat_sender >> $LOG 2>&1
