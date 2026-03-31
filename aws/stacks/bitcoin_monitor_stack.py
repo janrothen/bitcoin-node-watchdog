@@ -68,6 +68,13 @@ class BitcoinMonitorStack(cdk.Stack):
                 "Pass it with: cdk deploy --context node_id=<id>"
             )
 
+        ip_provider_hostname = self.node.try_get_context("ip_provider_hostname")
+        if not ip_provider_hostname:
+            raise ValueError(
+                "CDK context value 'ip_provider_hostname' is required. "
+                "Pass it with: cdk deploy --context ip_provider_hostname=<hostname>"
+            )
+
         receiver = lambda_.Function(
             self,
             "HeartbeatReceiver",
@@ -100,7 +107,7 @@ class BitcoinMonitorStack(cdk.Stack):
             code=lambda_.Code.from_asset("lambdas/reachability_checker"),
             timeout=Duration.seconds(25),
             environment={
-                "DUCKDNS_HOSTNAME": "you-monkey.duckdns.org",
+                "IP_PROVIDER_HOSTNAME": ip_provider_hostname,
                 "BITCOIN_PORT": "8333",
                 "NODE_ID": node_id,
             },
