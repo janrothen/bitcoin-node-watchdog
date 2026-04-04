@@ -5,9 +5,12 @@ import struct
 import time
 
 import boto3
+from botocore.config import Config
 
 MAGIC = b"\xf9\xbe\xb4\xd9"  # Bitcoin mainnet magic bytes
-CLOUDWATCH = boto3.client("cloudwatch")
+CLOUDWATCH = boto3.client(
+    "cloudwatch", config=Config(connect_timeout=5, read_timeout=10)
+)
 NAMESPACE = "BitcoinNode"
 DIMENSION = {"Name": "NodeId", "Value": os.environ["NODE_ID"]}
 _HOSTNAME = os.environ["IP_PROVIDER_HOSTNAME"]

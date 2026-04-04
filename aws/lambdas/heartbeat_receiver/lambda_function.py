@@ -5,8 +5,11 @@ import os
 from datetime import UTC, datetime, timedelta
 
 import boto3
+from botocore.config import Config
 
-cloudwatch = boto3.client("cloudwatch")
+cloudwatch = boto3.client(
+    "cloudwatch", config=Config(connect_timeout=5, read_timeout=10)
+)
 
 _MAX_AGE = timedelta(seconds=90)
 _SECRET = os.environ["HEARTBEAT_SECRET"]
