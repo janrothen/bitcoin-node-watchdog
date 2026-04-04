@@ -1,10 +1,14 @@
 # Bitcoin Node Watchdog
 
-![Python](https://img.shields.io/badge/python-3.13-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi%204-red)
 ![AWS CDK](https://img.shields.io/badge/infra-AWS%20CDK-orange)
 [![Deploy AWS](https://github.com/janrothen/bitcoin-node-watchdog/actions/workflows/deploy-aws.yml/badge.svg)](https://github.com/janrothen/bitcoin-node-watchdog/actions/workflows/deploy-aws.yml)
-![License](https://img.shields.io/badge/license-MIT-green)
+![Python](https://img.shields.io/badge/python-3.13-blue)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=janrothen_bitcoin-node-watchdog&metric=alert_status)](https://sonarcloud.io/project/overview?id=janrothen_bitcoin-node-watchdog)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=janrothen_bitcoin-node-watchdog&metric=bugs)](https://sonarcloud.io/project/overview?id=janrothen_bitcoin-node-watchdog)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=janrothen_bitcoin-node-watchdog&metric=coverage)](https://sonarcloud.io/project/overview?id=janrothen_bitcoin-node-watchdog)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=janrothen_bitcoin-node-watchdog&metric=security_rating)](https://sonarcloud.io/project/overview?id=janrothen_bitcoin-node-watchdog)
 
 Monitors a Bitcoin full node running on a Raspberry Pi. A Python package on the Pi sends an hourly heartbeat to AWS. A Lambda on AWS independently checks whether the node is reachable from the internet every hour by performing a real Bitcoin P2P handshake (resolving the current IP via DuckDNS, then exchanging `version`/`verack` messages on port 8333). CloudWatch Alarms watch both signals and send a single email via SNS when either has been missing for 6 hours — and another when it recovers.
 
