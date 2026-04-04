@@ -1,6 +1,6 @@
 import aws_cdk as cdk
 import pytest
-from aws_cdk.assertions import Template
+from aws_cdk.assertions import Match, Template
 from stacks.bitcoin_monitor_stack import BitcoinMonitorStack
 
 _REQUIRED_CONTEXT = {
@@ -81,6 +81,13 @@ def test_sns_topic_name(tmpl):
     tmpl.has_resource_properties(
         "AWS::SNS::Topic",
         {"TopicName": "BitcoinNodeAlerts"},
+    )
+
+
+def test_sns_topic_encrypted(tmpl):
+    tmpl.has_resource_properties(
+        "AWS::SNS::Topic",
+        {"KmsMasterKeyId": Match.any_value()},
     )
 
 
