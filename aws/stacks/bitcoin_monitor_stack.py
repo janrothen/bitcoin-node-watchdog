@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import aws_cdk as cdk
 from aws_cdk import (
     CfnOutput,
@@ -34,6 +36,12 @@ from constructs import Construct
 
 CHECK_PERIOD = Duration.hours(1)
 EVAL_PERIODS = 6  # 6 × 1h = alarm after 6h of continuous failure
+
+_LAMBDAS_DIR = Path(__file__).parent.parent / "lambdas"
+
+
+def _lambda_code(name: str) -> lambda_.AssetCode:
+    return lambda_.Code.from_asset(str(_LAMBDAS_DIR / name))
 
 
 class BitcoinMonitorStack(cdk.Stack):
@@ -88,7 +96,7 @@ class BitcoinMonitorStack(cdk.Stack):
             function_name="piHeartbeatReceiver",
             runtime=lambda_.Runtime.PYTHON_3_13,
             handler="lambda_function.lambda_handler",
-            code=lambda_.Code.from_asset("lambdas/heartbeat_receiver"),
+            code=_lambda_code("heartbeat_receiver"),
             environment={
                 "HEARTBEAT_SECRET": heartbeat_secret,
             },
@@ -117,7 +125,7 @@ class BitcoinMonitorStack(cdk.Stack):
             function_name="piReachabilityChecker",
             runtime=lambda_.Runtime.PYTHON_3_13,
             handler="lambda_function.lambda_handler",
-            code=lambda_.Code.from_asset("lambdas/reachability_checker"),
+            code=_lambda_code("reachability_checker"),
             # 10s TCP connect + 10s verack wait + DNS + overhead → 30s is safe
             timeout=Duration.seconds(30),
             dead_letter_queue=checker_dlq,

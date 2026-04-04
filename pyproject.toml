@@ -17,6 +17,8 @@ dev = [
     "pytest-cov>=5.0.0",
     "pre-commit>=4.0.0",
     "ruff>=0.11.2",
+    "aws-cdk-lib>=2.170.0",
+    "constructs>=10.0.0",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -24,7 +26,7 @@ packages = ["src/heartbeat_sender"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=src/heartbeat_sender --cov-report=xml --cov-config=pyproject.toml"
+addopts = "--cov=src/heartbeat_sender --cov=aws/lambdas --cov=aws/stacks --cov-report=xml --cov-config=pyproject.toml"
 
 [tool.coverage.run]
 relative_files = true
