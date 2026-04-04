@@ -26,10 +26,17 @@ packages = ["src/heartbeat_sender"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=src/heartbeat_sender --cov=aws/lambdas --cov=aws/stacks --cov-report=xml --cov-config=pyproject.toml"
+addopts = "--cov --cov-report=xml --cov-config=pyproject.toml"
 
 [tool.coverage.run]
 relative_files = true
+source = ["."]
+omit = [
+    "tests/*",
+    ".venv/*",
+    "aws/app.py",
+    "scripts/*",
+]
 
 [tool.ruff]
 target-version = "py313"
