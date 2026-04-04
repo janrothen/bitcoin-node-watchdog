@@ -24,7 +24,7 @@ packages = ["src/heartbeat_sender"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=src/monkey --cov-report=xml --cov-config=pyproject.toml"
+addopts = "--cov=src/heartbeat_sender --cov-report=xml --cov-config=pyproject.toml"
 
 [tool.coverage.run]
 relative_files = true
