@@ -1,6 +1,12 @@
 import os
 import sys
+from pathlib import Path
 from unittest.mock import MagicMock
+
+# Allow `from stacks.bitcoin_monitor_stack import ...` in CDK tests
+_AWS_DIR = str(Path(__file__).parent.parent / "aws")
+if _AWS_DIR not in sys.path:
+    sys.path.insert(0, _AWS_DIR)
 
 # Must happen before any lambda module is imported — their module-level
 # boto3.client / boto3.resource calls would otherwise hit AWS.
