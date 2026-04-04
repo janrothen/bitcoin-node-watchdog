@@ -21,6 +21,9 @@ from aws_cdk import (
     aws_iam as iam,
 )
 from aws_cdk import (
+    aws_kms as kms,
+)
+from aws_cdk import (
     aws_lambda as lambda_,
 )
 from aws_cdk import (
@@ -67,6 +70,7 @@ class BitcoinMonitorStack(cdk.Stack):
             self,
             "BitcoinAlerts",
             topic_name="BitcoinNodeAlerts",
+            master_key=kms.Alias.from_alias_name(self, "SnsKey", "alias/aws/sns"),
         )
         alert_topic.add_subscription(sns_subscriptions.EmailSubscription(alert_email))
 
