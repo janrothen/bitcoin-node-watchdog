@@ -161,7 +161,7 @@ Requires AWS CLI configured with credentials that have `cloudwatch:SetAlarmState
 
 ### Pi — cron job
 
-See [etc/cron.d/README.md](etc/cron.d/README.md) for installation steps.
+See [deploy/cron/README.md](deploy/cron/README.md) for installation steps.
 
 ### AWS — one-time setup
 

@@ -24,19 +24,28 @@ aws/                        # CDK infrastructure (deployed via GitHub Actions)
   requirements.txt
   stacks/bitcoin_monitor_stack.py
   lambdas/
-    heartbeat_receiver/     # POST from Pi → DynamoDB + CloudWatch metric
-    reachability_checker/   # EventBridge hourly → Bitcoin P2P check → CloudWatch metric
-etc/
-  cron.d/bitcoin-node-watchdog  # cron job for Pi (runs heartbeat_sender hourly)
+    heartbeat_receiver/
+      lambda_function.py    # POST from Pi → DynamoDB + CloudWatch metric
+    reachability_checker/
+      lambda_function.py    # EventBridge hourly → Bitcoin P2P check → CloudWatch metric
+deploy/
+  cron/
+    bitcoin-node-watchdog   # cron job for Pi (runs heartbeat_sender hourly)
+    README.md               # installation steps for the cron job
 .github/workflows/
   deploy-aws.yml            # push to main → cdk deploy (eu-north-1)
+  sonarcloud.yml            # SonarCloud analysis on push/PR
 tests/
   conftest.py
   test_heartbeat_receiver.py
   test_heartbeat_sender.py
   test_reachability_checker.py
+  test_bitcoin_monitor_stack.py
 config.toml                 # runtime config (heartbeat URL only)
 pyproject.toml              # packaging and dependencies
+.env.example                # template for .env (HEARTBEAT_SECRET, NODE_ID)
+sonar-project.properties    # SonarCloud project configuration
+.pre-commit-config.yaml     # pre-commit hooks (ruff lint/format)
 ```
 
 ## Key design decisions
