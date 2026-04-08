@@ -94,12 +94,12 @@ python3 -c "import secrets; print(secrets.token_hex(32))"
 cd ~/bitcoin-node-watchdog
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e .
+pip install .
 ```
 
 Run once manually:
 ```bash
-python -m heartbeat_sender
+.venv/bin/python -m heartbeat_sender
 ```
 
 ## Development
@@ -127,7 +127,7 @@ Expected output:
 [PASS] Valid signature → 200
 ```
 
-Requires only `requests` (installed with `pip install -e .`) and reads the endpoint from `config.toml`.
+Requires only `requests` (installed with `pip install .`) and reads the endpoint from `config.toml`.
 
 The Lambda functions use only Python standard library + `boto3` (built into the Lambda runtime), so they can be unit-tested without deployment.
 
