@@ -66,11 +66,27 @@ class BitcoinMonitorStack(cdk.Stack):
             )
 
         # ── SNS topic → email ─────────────────────────────────────────────────
+        # A customer-managed key is required so we can grant CloudWatch Alarms
+        # the kms:GenerateDataKey* / kms:Decrypt permissions it needs to publish
+        # to an encrypted topic. AWS-managed keys don't allow policy additions.
+        sns_key = kms.Key(
+            self,
+            "SnsKey",
+            description="Encryption key for Bitcoin Node Alerts SNS topic",
+            enable_key_rotation=True,
+        )
+        sns_key.add_to_resource_policy(
+            iam.PolicyStatement(
+                principals=[iam.ServicePrincipal("cloudwatch.amazonaws.com")],
+                actions=["kms:GenerateDataKey*", "kms:Decrypt"],
+                resources=["*"],
+            )
+        )
         alert_topic = sns.Topic(
             self,
             "BitcoinAlerts",
             topic_name="BitcoinNodeAlerts",
-            master_key=kms.Alias.from_alias_name(self, "SnsKey", "alias/aws/sns"),
+            master_key=sns_key,
         )
         alert_topic.add_subscription(sns_subscriptions.EmailSubscription(alert_email))
 
