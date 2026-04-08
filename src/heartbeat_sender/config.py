@@ -3,14 +3,13 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-# src/heartbeat_sender/config.py → project root is three levels up
-_PROJECT_ROOT = Path(__file__).parent.parent.parent
-
-load_dotenv(_PROJECT_ROOT / ".env")
-
 
 def _load() -> dict:
-    with open(_PROJECT_ROOT / "config.toml", "rb") as f:
+    # Resolve paths from CWD so the package works when installed into a venv.
+    # The cron job always runs from the project root via `cd $HOME`.
+    root = Path.cwd()
+    load_dotenv(root / ".env")
+    with open(root / "config.toml", "rb") as f:
         return tomllib.load(f)
 
 
@@ -22,7 +21,3 @@ def config() -> dict:
     if _config is None:
         _config = _load()
     return _config
-
-
-def project_root() -> Path:
-    return _PROJECT_ROOT
