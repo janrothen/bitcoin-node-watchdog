@@ -9,6 +9,7 @@
 [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=janrothen_bitcoin-node-watchdog&metric=bugs)](https://sonarcloud.io/project/overview?id=janrothen_bitcoin-node-watchdog)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=janrothen_bitcoin-node-watchdog&metric=coverage)](https://sonarcloud.io/project/overview?id=janrothen_bitcoin-node-watchdog)
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=janrothen_bitcoin-node-watchdog&metric=security_rating)](https://sonarcloud.io/project/overview?id=janrothen_bitcoin-node-watchdog)
+[![GitGuardian](https://img.shields.io/badge/GitGuardian-monitored-blue?logo=gitguardian&logoColor=white)](https://www.gitguardian.com)
 
 Monitors a Bitcoin full node running on a Raspberry Pi. A Python package on the Pi sends an hourly heartbeat to AWS. A Lambda on AWS independently checks whether the node is reachable from the internet every hour by performing a real Bitcoin P2P handshake (resolving the current IP via DuckDNS, then exchanging `version`/`verack` messages on port 8333). CloudWatch Alarms watch both signals and send a single email via SNS when either has been missing for 6 hours — and another when it recovers.
 
