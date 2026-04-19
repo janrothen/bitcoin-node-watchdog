@@ -32,6 +32,9 @@ deploy/
   cron/
     bitcoin-node-watchdog   # cron job for Pi (runs heartbeat_sender hourly)
     README.md               # installation steps for the cron job
+  logrotate.d/
+    bitcoin-node-watchdog   # logrotate drop-in for /var/log/bitcoin-node-watchdog-cron.log
+    README.md               # installation steps for logrotate
 .github/workflows/
   deploy-aws.yml            # push to main → cdk deploy (eu-north-1)
   sonarcloud.yml            # SonarCloud analysis on push/PR
