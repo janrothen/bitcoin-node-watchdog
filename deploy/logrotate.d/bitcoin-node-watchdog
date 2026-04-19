@@ -1,0 +1,13 @@
+# File:        /etc/logrotate.d/bitcoin-node-watchdog
+# Purpose:     Rotate the cron log so /var/log doesn't grow unbounded
+# Owner:       root:root, Permissions: 644
+
+/var/log/bitcoin-node-watchdog-cron.log {
+    weekly
+    rotate 4
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0644 pi pi
+}

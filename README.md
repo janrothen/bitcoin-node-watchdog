@@ -164,6 +164,12 @@ Requires AWS CLI configured with credentials that have `cloudwatch:SetAlarmState
 
 See [deploy/cron/README.md](deploy/cron/README.md) for installation steps.
 
+### Pi — log rotation
+
+The cron job appends to `/var/log/bitcoin-node-watchdog-cron.log`. To prevent
+unbounded growth, install the logrotate drop-in — see
+[deploy/logrotate.d/README.md](deploy/logrotate.d/README.md) for installation steps.
+
 ### AWS — one-time setup
 
 **1. Bootstrap CDK** (once per account/region):
@@ -253,6 +259,7 @@ All resources live in the `BitcoinMonitorStack` CloudFormation stack (visible in
 | CloudWatch alarms stuck in INSUFFICIENT_DATA | No data yet — wait up to 1h for the first Lambda invocations |
 | Alarm fires every hour instead of once | OK action not set on alarm — redeploy the CDK stack |
 | DuckDNS lookup returns stale IP | DDNS update cron (`bitcoin-node-watchdog`) not running on Pi — check that cron job |
+| `/var/log/bitcoin-node-watchdog-cron.log` growing without bound | logrotate drop-in not installed — see [deploy/logrotate.d/README.md](deploy/logrotate.d/README.md) |
 
 ## Security
 
