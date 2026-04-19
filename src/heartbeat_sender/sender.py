@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import sys
 from datetime import UTC, datetime
 
 import requests
@@ -38,10 +39,13 @@ class HeartbeatSender:
                 self._endpoint, json=body, headers=headers, timeout=self._timeout
             )
         except requests.exceptions.RequestException as e:
-            print(f"Failed to send heartbeat: {e}")
+            print(f"Failed to send heartbeat: {e}", file=sys.stderr)
             return False
         if r.status_code not in (200, 201):
-            print(f"Failed to send heartbeat:\nCode: {r.status_code}\nResult: {r.text}")
+            print(
+                f"Failed to send heartbeat:\nCode: {r.status_code}\nResult: {r.text}",
+                file=sys.stderr,
+            )
             return False
         print("Heartbeat sent.")
         return True

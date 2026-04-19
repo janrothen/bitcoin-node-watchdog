@@ -6,6 +6,9 @@
 import os
 import sys
 import traceback
+from pathlib import Path
+
+from dotenv import load_dotenv
 
 from .config import config
 from .sender import HeartbeatSender
@@ -21,11 +24,12 @@ def _from_env() -> HeartbeatSender:
 
 
 def run() -> None:
+    load_dotenv(Path.cwd() / ".env")
     try:
         if not _from_env().send():
             sys.exit(1)
     except Exception:
-        traceback.print_exc(file=sys.stdout)
+        traceback.print_exc(file=sys.stderr)
         sys.exit(1)
 
 

@@ -8,18 +8,20 @@ import boto3
 from botocore.config import Config
 
 MAGIC = b"\xf9\xbe\xb4\xd9"  # Bitcoin mainnet magic bytes
-CLOUDWATCH = boto3.client(
+
+cloudwatch = boto3.client(
     "cloudwatch", config=Config(connect_timeout=5, read_timeout=10)
 )
-NAMESPACE = "BitcoinNode"
-DIMENSION = {"Name": "NodeId", "Value": os.environ["NODE_ID"]}
+
+_NAMESPACE = "BitcoinNode"
+_NODE_ID = os.environ["NODE_ID"]
 _HOSTNAME = os.environ["IP_PROVIDER_HOSTNAME"]
 _PORT = int(os.environ.get("BITCOIN_PORT", "8333"))
 
 type Response = dict[str, int | str]
 
 
-def lambda_handler(event: dict, context: object) -> Response:
+def lambda_handler(event: dict, _context: object) -> Response:
     reachable = _check(_HOSTNAME, _PORT)
     _put_metric(reachable)
     return {"reachable": reachable}
@@ -94,15 +96,19 @@ def _wait_for_verack(sock: socket.socket) -> bool:
     return False
 
 
-def _put_metric(reachable: bool) -> None:
-    CLOUDWATCH.put_metric_data(
-        Namespace=NAMESPACE,
+def _emit_metric(metric_name: str, value: float, node_id: str) -> None:
+    cloudwatch.put_metric_data(
+        Namespace=_NAMESPACE,
         MetricData=[
             {
-                "MetricName": "NodeReachable",
-                "Dimensions": [DIMENSION],
-                "Value": 1.0 if reachable else 0.0,
+                "MetricName": metric_name,
+                "Dimensions": [{"Name": "NodeId", "Value": node_id}],
+                "Value": value,
                 "Unit": "Count",
             }
         ],
     )
+
+
+def _put_metric(reachable: bool) -> None:
+    _emit_metric("NodeReachable", 1.0 if reachable else 0.0, _NODE_ID)
