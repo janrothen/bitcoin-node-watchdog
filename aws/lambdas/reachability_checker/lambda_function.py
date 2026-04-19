@@ -77,20 +77,19 @@ def _message(command: bytes, payload: bytes) -> bytes:
 def _wait_for_verack(sock: socket.socket) -> bool:
     sock.settimeout(10)
     buf = b""
-    # Read until we find a verack or give up after 4096 bytes.
+    # Read until we find a verack/version header or give up after 4096 bytes.
     # Bounded by the 10s socket timeout even if the remote sends continuous garbage.
+    # Note: this is a substring scan, not a framed parse — the header bytes could
+    # in theory appear inside another message's payload. Acceptable for a liveness
+    # probe; a hostile peer forging such a payload still proves the port is open.
+    verack_cmd = MAGIC + b"verack\x00\x00\x00\x00\x00\x00"
+    version_cmd = MAGIC + b"version\x00\x00\x00\x00\x00"
     while len(buf) < 4096:
         chunk = sock.recv(256)
         if not chunk:
             break
         buf += chunk
-        # Scan for verack message header (magic + "verack\x00\x00\x00\x00\x00\x00")
-        verack_cmd = MAGIC + b"verack\x00\x00\x00\x00\x00\x00"
-        if verack_cmd in buf:
-            return True
-        # Also accept if we got a version message back (node is alive and talking)
-        version_cmd = MAGIC + b"version\x00\x00\x00\x00\x00"
-        if version_cmd in buf:
+        if verack_cmd in buf or version_cmd in buf:
             return True
     return False
 
