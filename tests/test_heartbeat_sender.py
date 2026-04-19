@@ -59,9 +59,10 @@ def test_send_success_201(mock_post, sender, capsys):
 def test_send_bad_status(mock_post, sender, capsys):
     mock_post.return_value = _mock_response(500, "Internal Server Error")
     assert sender.send() is False
-    out = capsys.readouterr().out
-    assert "Failed to send heartbeat" in out
-    assert "500" in out
+    captured = capsys.readouterr()
+    assert "Failed to send heartbeat" in captured.err
+    assert "500" in captured.err
+    assert captured.out == ""
 
 
 @patch(
@@ -70,7 +71,9 @@ def test_send_bad_status(mock_post, sender, capsys):
 )
 def test_send_connection_error(mock_post, sender, capsys):
     assert sender.send() is False
-    assert "Failed to send heartbeat" in capsys.readouterr().out
+    captured = capsys.readouterr()
+    assert "Failed to send heartbeat" in captured.err
+    assert captured.out == ""
 
 
 @patch(
@@ -79,7 +82,9 @@ def test_send_connection_error(mock_post, sender, capsys):
 )
 def test_send_timeout(mock_post, sender, capsys):
     assert sender.send() is False
-    assert "Failed to send heartbeat" in capsys.readouterr().out
+    captured = capsys.readouterr()
+    assert "Failed to send heartbeat" in captured.err
+    assert captured.out == ""
 
 
 @patch("heartbeat_sender.sender.requests.post")

@@ -51,19 +51,8 @@ class BitcoinMonitorStack(cdk.Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        alert_email = self.node.try_get_context("alert_email")
-        if not alert_email:
-            raise ValueError(
-                "CDK context value 'alert_email' is required. "
-                "Pass it with: cdk deploy --context alert_email=<email>"
-            )
-
-        heartbeat_secret = self.node.try_get_context("heartbeat_secret")
-        if not heartbeat_secret:
-            raise ValueError(
-                "CDK context value 'heartbeat_secret' is required. "
-                "Pass it with: cdk deploy --context heartbeat_secret=<secret>"
-            )
+        alert_email = self._require_context("alert_email")
+        heartbeat_secret = self._require_context("heartbeat_secret")
 
         # ── SNS topic → email ─────────────────────────────────────────────────
         # A customer-managed key is required so we can grant CloudWatch Alarms
@@ -92,19 +81,8 @@ class BitcoinMonitorStack(cdk.Stack):
 
         # ── Heartbeat receiver (Pi → Lambda → CloudWatch) ────────────────────
 
-        node_id = self.node.try_get_context("node_id")
-        if not node_id:
-            raise ValueError(
-                "CDK context value 'node_id' is required. "
-                "Pass it with: cdk deploy --context node_id=<id>"
-            )
-
-        ip_provider_hostname = self.node.try_get_context("ip_provider_hostname")
-        if not ip_provider_hostname:
-            raise ValueError(
-                "CDK context value 'ip_provider_hostname' is required. "
-                "Pass it with: cdk deploy --context ip_provider_hostname=<hostname>"
-            )
+        node_id = self._require_context("node_id")
+        ip_provider_hostname = self._require_context("ip_provider_hostname")
 
         # Note: the secret is stored as a Lambda env var (KMS-encrypted at rest
         # by AWS). For a production deployment, prefer SSM Parameter Store
@@ -223,3 +201,12 @@ class BitcoinMonitorStack(cdk.Stack):
             value=receiver_url.url,
             description="Paste this URL into config.toml as heartbeat_endpoint",
         )
+
+    def _require_context(self, key: str) -> str:
+        value = self.node.try_get_context(key)
+        if not value:
+            raise ValueError(
+                f"CDK context value '{key}' is required. "
+                f"Pass it with: cdk deploy --context {key}=<value>"
+            )
+        return value

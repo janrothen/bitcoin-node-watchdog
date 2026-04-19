@@ -100,14 +100,14 @@ def test_wait_for_verack_garbage_fills_buffer():
 # ── _put_metric ───────────────────────────────────────────────────────────────
 
 
-@patch.object(lf, "CLOUDWATCH")
+@patch.object(lf, "cloudwatch")
 def test_put_metric_reachable(mock_cw):
     lf._put_metric(True)
     metric = mock_cw.put_metric_data.call_args.kwargs["MetricData"][0]
     assert metric["Value"] == 1.0
 
 
-@patch.object(lf, "CLOUDWATCH")
+@patch.object(lf, "cloudwatch")
 def test_put_metric_unreachable(mock_cw):
     lf._put_metric(False)
     metric = mock_cw.put_metric_data.call_args.kwargs["MetricData"][0]
