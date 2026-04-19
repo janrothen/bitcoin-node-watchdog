@@ -7,7 +7,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
-from heartbeat_sender.__main__ import HeartbeatSender, _from_env
+from heartbeat_sender.__main__ import _from_env
+from heartbeat_sender.sender import HeartbeatSender
 
 ENDPOINT = "https://example.lambda-url.eu-north-1.on.aws/"
 SECRET = "test-secret"
@@ -29,7 +30,7 @@ def _mock_response(status_code: int, text: str = "") -> MagicMock:
 # ── HeartbeatSender.send ─────────────────────────────────────────────────────
 
 
-@patch("heartbeat_sender.__main__.requests.post")
+@patch("heartbeat_sender.sender.requests.post")
 def test_send_success_200(mock_post, sender, capsys):
     mock_post.return_value = _mock_response(200)
     assert sender.send() is True
@@ -47,14 +48,14 @@ def test_send_success_200(mock_post, sender, capsys):
     assert "Heartbeat sent." in capsys.readouterr().out
 
 
-@patch("heartbeat_sender.__main__.requests.post")
+@patch("heartbeat_sender.sender.requests.post")
 def test_send_success_201(mock_post, sender, capsys):
     mock_post.return_value = _mock_response(201)
     assert sender.send() is True
     assert "Heartbeat sent." in capsys.readouterr().out
 
 
-@patch("heartbeat_sender.__main__.requests.post")
+@patch("heartbeat_sender.sender.requests.post")
 def test_send_bad_status(mock_post, sender, capsys):
     mock_post.return_value = _mock_response(500, "Internal Server Error")
     assert sender.send() is False
@@ -64,7 +65,7 @@ def test_send_bad_status(mock_post, sender, capsys):
 
 
 @patch(
-    "heartbeat_sender.__main__.requests.post",
+    "heartbeat_sender.sender.requests.post",
     side_effect=requests.exceptions.ConnectionError("boom"),
 )
 def test_send_connection_error(mock_post, sender, capsys):
@@ -73,7 +74,7 @@ def test_send_connection_error(mock_post, sender, capsys):
 
 
 @patch(
-    "heartbeat_sender.__main__.requests.post",
+    "heartbeat_sender.sender.requests.post",
     side_effect=requests.exceptions.Timeout("timed out"),
 )
 def test_send_timeout(mock_post, sender, capsys):
@@ -81,7 +82,7 @@ def test_send_timeout(mock_post, sender, capsys):
     assert "Failed to send heartbeat" in capsys.readouterr().out
 
 
-@patch("heartbeat_sender.__main__.requests.post")
+@patch("heartbeat_sender.sender.requests.post")
 def test_send_uses_timezone_aware_timestamp(mock_post, sender):
     mock_post.return_value = _mock_response(200)
     sender.send()
@@ -91,7 +92,7 @@ def test_send_uses_timezone_aware_timestamp(mock_post, sender):
     assert dt.tzinfo is not None
 
 
-@patch("heartbeat_sender.__main__.requests.post")
+@patch("heartbeat_sender.sender.requests.post")
 def test_send_respects_custom_timeout(mock_post):
     mock_post.return_value = _mock_response(200)
     HeartbeatSender(ENDPOINT, SECRET, NODE_ID, timeout=3).send()
