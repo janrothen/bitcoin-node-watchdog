@@ -13,5 +13,6 @@ coverage.xml
 *.log
 
 .claude/settings.local.json
+.claude/worktrees/
 .env
 .venv/
