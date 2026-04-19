@@ -111,3 +111,28 @@ def test_valid_authenticated_request_returns_200(mock_cw):
     result = lf.lambda_handler(_event(), None)
     assert result == {"statusCode": 200, "body": "ok"}
     mock_cw.put_metric_data.assert_called_once()
+
+
+# ── Malformed field types ─────────────────────────────────────────────────────
+
+
+@patch.object(lf, "cloudwatch")
+def test_non_string_sent_at_returns_401(mock_cw):
+    # A JSON bool/number in sent_at must not crash the handler.
+    event = {"headers": {}, "body": json.dumps({"source": "x", "sent_at": True})}
+    result = lf.lambda_handler(event, None)
+    assert result == {"statusCode": 401, "body": "unauthorized"}
+    mock_cw.put_metric_data.assert_not_called()
+
+
+@patch.object(lf, "cloudwatch")
+def test_non_string_source_recorded_as_unknown(mock_cw):
+    sent_at = datetime.now(UTC).isoformat()
+    event = {
+        "headers": _make_headers(sent_at),
+        "body": json.dumps({"source": 0, "sent_at": sent_at}),
+    }
+    result = lf.lambda_handler(event, None)
+    assert result == {"statusCode": 200, "body": "ok"}
+    metric = mock_cw.put_metric_data.call_args.kwargs["MetricData"][0]
+    assert metric["Dimensions"][0] == {"Name": "NodeId", "Value": "unknown"}

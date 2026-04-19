@@ -26,13 +26,14 @@ def _parse_body(event: dict) -> tuple[dict, None] | tuple[None, Response]:
         return None, {"statusCode": 400, "body": "invalid json"}
 
 
-def _verify_signature(event: dict, sent_at_raw: str | None) -> Response | None:
+def _verify_signature(event: dict, sent_at_raw: object) -> Response | None:
     """Returns error_response or None if the signature is valid.
 
-    Missing sent_at is treated as an auth failure so unauthenticated callers
-    cannot probe field names via different error codes.
+    A missing or non-string sent_at is treated as an auth failure so
+    unauthenticated callers cannot probe field names or types via different
+    error codes.
     """
-    if not sent_at_raw:
+    if not isinstance(sent_at_raw, str) or not sent_at_raw:
         return {"statusCode": 401, "body": "unauthorized"}
     headers = event.get("headers") or {}
     token = headers.get(_SIGNATURE_HEADER.lower()) or headers.get(_SIGNATURE_HEADER)
@@ -96,6 +97,8 @@ def lambda_handler(event: dict, context: object) -> Response:
     if err:
         return err
 
-    source = str(body.get("source") or "unknown")[:256]
-    _record_heartbeat(source)
+    source = body.get("source")
+    if not isinstance(source, str) or not source:
+        source = "unknown"
+    _record_heartbeat(source[:256])
     return {"statusCode": 200, "body": "ok"}
