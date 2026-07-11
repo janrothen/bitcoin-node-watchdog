@@ -58,6 +58,16 @@ def test_heartbeat_receiver_pins_node_id(tmpl):
     )
 
 
+def test_heartbeat_receiver_concurrency_capped(tmpl):
+    tmpl.has_resource_properties(
+        "AWS::Lambda::Function",
+        {
+            "FunctionName": "piHeartbeatReceiver",
+            "ReservedConcurrentExecutions": 5,
+        },
+    )
+
+
 def test_reachability_checker_timeout_30s(tmpl):
     tmpl.has_resource_properties(
         "AWS::Lambda::Function",
