@@ -105,8 +105,28 @@ def test_missing_token_returns_401(mock_cw):
 
 
 @patch.object(lf, "cloudwatch")
-def test_wrong_token_returns_401(mock_cw):
+def test_wrong_header_name_returns_401(mock_cw):
     result = lf.lambda_handler(_event(headers={"x-heartbeat-token": "wrong"}), None)
+    assert result == {"statusCode": 401, "body": "unauthorized"}
+    mock_cw.put_metric_data.assert_not_called()
+
+
+@patch.object(lf, "cloudwatch")
+def test_wrong_signature_returns_401(mock_cw):
+    # Correct header name, wrong digest — exercises the compare_digest branch.
+    event = _event(headers={"x-heartbeat-signature-256": "0" * 64})
+    result = lf.lambda_handler(event, None)
+    assert result == {"statusCode": 401, "body": "unauthorized"}
+    mock_cw.put_metric_data.assert_not_called()
+
+
+@patch.object(lf, "cloudwatch")
+def test_signature_over_different_body_returns_401(mock_cw):
+    # A valid signature is bound to the exact body bytes — swapping the body
+    # (e.g. a replay with a modified source) must fail verification.
+    other_payload = json.dumps({"source": "evil", "sent_at": "2026-01-01T00:00:00"})
+    event = _event(headers=_make_headers(other_payload))
+    result = lf.lambda_handler(event, None)
     assert result == {"statusCode": 401, "body": "unauthorized"}
     mock_cw.put_metric_data.assert_not_called()
 
@@ -136,6 +156,23 @@ def test_stale_sent_at_returns_400(mock_cw):
     result = lf.lambda_handler(_event(sent_at=stale), None)
     assert result == {"statusCode": 400, "body": "sent_at out of range"}
     mock_cw.put_metric_data.assert_not_called()
+
+
+@patch.object(lf, "cloudwatch")
+def test_future_sent_at_beyond_skew_returns_400(mock_cw):
+    # Freshness is symmetric: a timestamp too far in the future (Pi clock
+    # ahead of AWS beyond the 90s skew allowance) is rejected too.
+    future = (datetime.now(UTC) + timedelta(seconds=91)).isoformat()
+    result = lf.lambda_handler(_event(sent_at=future), None)
+    assert result == {"statusCode": 400, "body": "sent_at out of range"}
+    mock_cw.put_metric_data.assert_not_called()
+
+
+@patch.object(lf, "cloudwatch")
+def test_future_sent_at_within_skew_accepted(mock_cw):
+    slightly_ahead = (datetime.now(UTC) + timedelta(seconds=30)).isoformat()
+    result = lf.lambda_handler(_event(sent_at=slightly_ahead), None)
+    assert result == {"statusCode": 200, "body": "ok"}
 
 
 @patch.object(lf, "cloudwatch")
