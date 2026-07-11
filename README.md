@@ -244,6 +244,7 @@ All resources live in the `BitcoinMonitorStack` CloudFormation stack (visible in
 | `BitcoinNodeAlerts` SNS topic | Delivers alarm and recovery emails |
 | `BitcoinNode-HeartbeatMissing` CloudWatch alarm | Fires after 6h of missing heartbeats |
 | `BitcoinNode-NotReachable` CloudWatch alarm | Fires after 6h of failed reachability checks |
+| `piReachabilityCheckerDLQ` SQS queue | Dead-letter queue for failed checker invocations (14-day retention) |
 | `BitcoinNode-CheckerDLQ` CloudWatch alarm | Fires when checker invocations exhaust retries and land in the DLQ |
 | EventBridge rule | Triggers reachability checker every hour |
 
@@ -256,16 +257,20 @@ All resources live in the `BitcoinMonitorStack` CloudFormation stack (visible in
 | `cdk deploy` fails with auth error | OIDC role misconfigured or `AWS_ACCOUNT_ID` secret wrong — re-check IAM trust policy |
 | `python -m heartbeat_sender` exits silently | `heartbeat.receiver.endpoint` in `config.toml` not set — update with CloudFormation output URL |
 | Heartbeat sender gets 401 | `HEARTBEAT_SECRET` on the Pi doesn't match the secret used during `cdk deploy` — re-check both and redeploy if needed |
+| Heartbeat sender gets 400 `unknown source` | `NODE_ID` on the Pi doesn't match the `node_id` CDK context of the deployed stack — align the two |
 | Cron job not running | Wrong Python path — use absolute path: `/home/pi/bitcoin-node-watchdog/.venv/bin/python` |
 | CloudWatch alarms stuck in INSUFFICIENT_DATA | No data yet — wait up to 1h for the first Lambda invocations |
 | Alarm fires every hour instead of once | OK action not set on alarm — redeploy the CDK stack |
 | DuckDNS lookup returns stale IP | DDNS update cron (`bitcoin-node-watchdog`) not running on Pi — check that cron job |
 | `/var/log/bitcoin-node-watchdog-cron.log` growing without bound | logrotate drop-in not installed — see [deploy/logrotate.d/README.md](deploy/logrotate.d/README.md) |
+| `BitcoinNode-CheckerDLQ` alarm email | Reachability checker invocations failed all retries — check the Lambda's CloudWatch logs |
 
 ## Security
 
 - `config.toml` contains no secrets — it is safe to commit
 - Requests are authenticated with HMAC-SHA256: the sender computes `HMAC(secret, raw request body)` and sends the hex digest as `X-Heartbeat-Signature-256` — the secret is never transmitted in plaintext and every body field is authenticated. Each signature is single-use, bound to the timestamp inside the body, and the receiver rejects requests older than 90 seconds
+- The receiver pins the CloudWatch `NodeId` dimension to its deployed configuration and rejects requests whose `source` doesn't match — a request can never mint a new metric dimension
+- The heartbeat endpoint is an open Lambda Function URL (auth happens in the handler), so its reserved concurrency is capped at 5 to bound abuse
 - Never commit AWS credentials — the deployment uses OIDC (no stored keys)
 - The `AWS_ACCOUNT_ID` GitHub secret is a 12-digit number, not a credential, but keep it private
 
