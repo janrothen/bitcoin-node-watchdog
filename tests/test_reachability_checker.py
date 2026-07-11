@@ -45,27 +45,41 @@ def _mock_conn(response: bytes):
     return cm
 
 
+def _addrinfo(ip: str, port: int = 8333) -> list:
+    family = socket.AF_INET6 if ":" in ip else socket.AF_INET
+    return [(family, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", (ip, port))]
+
+
 @patch.object(lf.socket, "create_connection")
-@patch.object(lf.socket, "gethostbyname", return_value="1.2.3.4")
+@patch.object(lf.socket, "getaddrinfo", return_value=_addrinfo("1.2.3.4"))
 def test_check_verack(mock_dns, mock_conn):
     mock_conn.return_value = _mock_conn(VERACK + b"\x00" * 8)
     assert lf._check("test.duckdns.org", 8333) is True
 
 
 @patch.object(lf.socket, "create_connection")
-@patch.object(lf.socket, "gethostbyname", return_value="1.2.3.4")
+@patch.object(lf.socket, "getaddrinfo", return_value=_addrinfo("1.2.3.4"))
 def test_check_version_msg(mock_dns, mock_conn):
     mock_conn.return_value = _mock_conn(VERSION + b"\x00" * 100)
     assert lf._check("test.duckdns.org", 8333) is True
 
 
-@patch.object(lf.socket, "gethostbyname", side_effect=socket.gaierror("DNS fail"))
+@patch.object(lf.socket, "create_connection")
+@patch.object(lf.socket, "getaddrinfo", return_value=_addrinfo("2001:db8::1"))
+def test_check_ipv6_peer(mock_dns, mock_conn):
+    # An IPv6-only DDNS record must not break the version message build.
+    mock_conn.return_value = _mock_conn(VERACK + b"\x00" * 8)
+    assert lf._check("test.duckdns.org", 8333) is True
+    assert mock_conn.call_args.args[0] == ("2001:db8::1", 8333)
+
+
+@patch.object(lf.socket, "getaddrinfo", side_effect=socket.gaierror("DNS fail"))
 def test_check_dns_error(mock_dns):
     assert lf._check("bad.hostname", 8333) is False
 
 
 @patch.object(lf.socket, "create_connection", side_effect=ConnectionRefusedError)
-@patch.object(lf.socket, "gethostbyname", return_value="1.2.3.4")
+@patch.object(lf.socket, "getaddrinfo", return_value=_addrinfo("1.2.3.4"))
 def test_check_connection_refused(mock_dns, mock_conn):
     assert lf._check("test.duckdns.org", 8333) is False
 
@@ -154,3 +168,14 @@ def test_net_addr_length():
 def test_net_addr_port_big_endian():
     addr = lf._net_addr("1.2.3.4", 8333)
     assert struct.unpack(">H", addr[-2:])[0] == 8333
+
+
+def test_net_addr_ipv4_mapped():
+    addr = lf._net_addr("1.2.3.4", 8333)
+    assert addr[8:24] == b"\x00" * 10 + b"\xff\xff\x01\x02\x03\x04"
+
+
+def test_net_addr_ipv6():
+    addr = lf._net_addr("2001:db8::1", 8333)
+    assert len(addr) == 26
+    assert addr[8:24] == socket.inet_pton(socket.AF_INET6, "2001:db8::1")

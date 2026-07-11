@@ -29,13 +29,20 @@ def lambda_handler(event: dict, _context: object) -> Response:
 
 def _check(hostname: str, port: int) -> bool:
     try:
-        ip = socket.gethostbyname(hostname)
+        ip = _resolve(hostname, port)
         with socket.create_connection((ip, port), timeout=10) as sock:
             sock.sendall(_version_message(ip, port))
             return _wait_for_verack(sock)
     except Exception as e:
         print(f"Reachability check failed: {e}")
         return False
+
+
+def _resolve(hostname: str, port: int) -> str:
+    # getaddrinfo instead of the legacy IPv4-only gethostbyname, so the check
+    # keeps working if the DDNS record ever moves to IPv6.
+    infos = socket.getaddrinfo(hostname, port, type=socket.SOCK_STREAM)
+    return infos[0][4][0]
 
 
 def _version_message(ip: str, port: int) -> bytes:
@@ -64,9 +71,16 @@ def _version_message(ip: str, port: int) -> bytes:
 
 def _net_addr(ip: str, port: int) -> bytes:
     services = struct.pack("<Q", 1)
-    ip_bytes = b"\x00" * 10 + b"\xff\xff" + socket.inet_aton(ip)
     port_bytes = struct.pack(">H", port)
-    return services + ip_bytes + port_bytes
+    return services + _ip_bytes(ip) + port_bytes
+
+
+def _ip_bytes(ip: str) -> bytes:
+    # Bitcoin net_addr always carries 16 address bytes: IPv6 as-is, IPv4
+    # mapped into IPv6 (::ffff:a.b.c.d).
+    if ":" in ip:
+        return socket.inet_pton(socket.AF_INET6, ip)
+    return b"\x00" * 10 + b"\xff\xff" + socket.inet_aton(ip)
 
 
 def _message(command: bytes, payload: bytes) -> bytes:
