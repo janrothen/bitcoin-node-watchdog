@@ -12,6 +12,7 @@ from pathlib import Path
 import requests
 
 _SIGNATURE_HEADER = "X-Heartbeat-Signature-256"
+_REQUEST_TIMEOUT_SECONDS = 10
 _ROOT = Path(__file__).parent.parent
 
 
@@ -34,6 +35,7 @@ def main():
     r = requests.post(
         endpoint,
         json={"source": node_id, "sent_at": datetime.now(UTC).isoformat()},
+        timeout=_REQUEST_TIMEOUT_SECONDS,
     )
     status = "PASS" if r.status_code == 401 else f"FAIL (got {r.status_code})"
     print(f"[{status}] No auth → {r.status_code}")
@@ -48,6 +50,7 @@ def main():
             "Content-Type": "application/json",
             _SIGNATURE_HEADER: _create_signature(secret, payload),
         },
+        timeout=_REQUEST_TIMEOUT_SECONDS,
     )
     status = "PASS" if r.status_code == 200 else f"FAIL (got {r.status_code})"
     print(f"[{status}] Valid signature → {r.status_code}")
