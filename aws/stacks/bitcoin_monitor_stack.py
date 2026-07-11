@@ -104,8 +104,12 @@ class BitcoinMonitorStack(cdk.Stack):
         )
         receiver.add_to_role_policy(
             iam.PolicyStatement(
+                # PutMetricData has no resource-level ARNs, so "*" is required;
+                # the namespace condition keeps a compromised Lambda from
+                # writing into any other namespace.
                 actions=["cloudwatch:PutMetricData"],
                 resources=["*"],
+                conditions={"StringEquals": {"cloudwatch:namespace": "BitcoinNode"}},
             )
         )
 
@@ -138,8 +142,12 @@ class BitcoinMonitorStack(cdk.Stack):
         )
         checker.add_to_role_policy(
             iam.PolicyStatement(
+                # PutMetricData has no resource-level ARNs, so "*" is required;
+                # the namespace condition keeps a compromised Lambda from
+                # writing into any other namespace.
                 actions=["cloudwatch:PutMetricData"],
                 resources=["*"],
+                conditions={"StringEquals": {"cloudwatch:namespace": "BitcoinNode"}},
             )
         )
 

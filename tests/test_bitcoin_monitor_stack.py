@@ -65,6 +65,24 @@ def test_reachability_checker_timeout_30s(tmpl):
     )
 
 
+# ── IAM ───────────────────────────────────────────────────────────────────────
+
+
+def test_put_metric_data_scoped_to_namespace(tmpl):
+    policies = tmpl.find_resources("AWS::IAM::Policy")
+    statements = [
+        stmt
+        for policy in policies.values()
+        for stmt in policy["Properties"]["PolicyDocument"]["Statement"]
+        if stmt["Action"] == "cloudwatch:PutMetricData"
+    ]
+    assert len(statements) == 2  # receiver + checker
+    for stmt in statements:
+        assert stmt["Condition"] == {
+            "StringEquals": {"cloudwatch:namespace": "BitcoinNode"}
+        }
+
+
 # ── CloudWatch alarms ─────────────────────────────────────────────────────────
 
 
