@@ -3,6 +3,7 @@
 
 import hashlib
 import hmac
+import json
 import os
 import tomllib
 from datetime import UTC, datetime
@@ -14,8 +15,8 @@ _SIGNATURE_HEADER = "X-Heartbeat-Signature-256"
 _ROOT = Path(__file__).parent.parent
 
 
-def _create_signature(secret: str, sent_at: str) -> str:
-    return hmac.new(secret.encode(), sent_at.encode(), hashlib.sha256).hexdigest()
+def _create_signature(secret: str, payload: str) -> str:
+    return hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
 
 
 def _endpoint() -> str:
@@ -37,10 +38,14 @@ def main():
 
     # 2. Valid HMAC signature → expect 200
     sent_at = datetime.now(UTC).isoformat()
+    payload = json.dumps({"source": "smoke", "sent_at": sent_at})
     r = requests.post(
         endpoint,
-        json={"source": "smoke", "sent_at": sent_at},
-        headers={_SIGNATURE_HEADER: _create_signature(secret, sent_at)},
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            _SIGNATURE_HEADER: _create_signature(secret, payload),
+        },
     )
     status = "PASS" if r.status_code == 200 else f"FAIL (got {r.status_code})"
     print(f"[{status}] Valid signature → {r.status_code}")

@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import json
 import os
 from datetime import datetime
 from unittest.mock import MagicMock, patch
@@ -37,13 +38,16 @@ def test_send_success_200(mock_post, sender, capsys):
 
     call = mock_post.call_args
     assert call.args[0] == ENDPOINT
-    body = call.kwargs["json"]
+    payload = call.kwargs["data"]
+    body = json.loads(payload)
     assert body["source"] == NODE_ID
     assert "sent_at" in body
+    # Signature covers the exact bytes sent, not just the timestamp.
     expected_token = hmac.new(
-        SECRET.encode(), body["sent_at"].encode(), hashlib.sha256
+        SECRET.encode(), payload.encode(), hashlib.sha256
     ).hexdigest()
     assert call.kwargs["headers"]["X-Heartbeat-Signature-256"] == expected_token
+    assert call.kwargs["headers"]["Content-Type"] == "application/json"
     assert call.kwargs["timeout"] == 10
     assert "Heartbeat sent." in capsys.readouterr().out
 
@@ -92,7 +96,7 @@ def test_send_uses_timezone_aware_timestamp(mock_post, sender):
     mock_post.return_value = _mock_response(200)
     sender.send()
 
-    body = mock_post.call_args.kwargs["json"]
+    body = json.loads(mock_post.call_args.kwargs["data"])
     dt = datetime.fromisoformat(body["sent_at"])
     assert dt.tzinfo is not None
 
@@ -108,9 +112,9 @@ def test_send_respects_custom_timeout(mock_post):
 
 
 def test_sign_matches_expected_hmac():
-    sent_at = "2026-04-19T12:00:00+00:00"
-    expected = hmac.new(SECRET.encode(), sent_at.encode(), hashlib.sha256).hexdigest()
-    assert HeartbeatSender._sign(SECRET, sent_at) == expected
+    payload = '{"source": "lasvegas", "sent_at": "2026-04-19T12:00:00+00:00"}'
+    expected = hmac.new(SECRET.encode(), payload.encode(), hashlib.sha256).hexdigest()
+    assert HeartbeatSender._sign(SECRET, payload) == expected
 
 
 # ── _from_env ────────────────────────────────────────────────────────────────
