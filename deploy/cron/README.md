@@ -1,16 +1,16 @@
 # Automated Scheduling with Cron
 
-The project includes a cron file (`etc/cron.d/bitcoin-node-watchdog`) that sends a heartbeat to AWS every hour.
+The project includes a cron file (`deploy/cron/bitcoin-node-watchdog`) that sends a heartbeat to AWS every hour.
 
 ## Installation steps
 
 ### 1. Set the repo path
 
-Update the `HOME` variable at the top of `bitcoin-node-watchdog` to match where you cloned the repo.
+Update the `APP_DIR` variable at the top of `bitcoin-node-watchdog` to match where you cloned the repo.
 
 ### 2. Copy the scheduling file
 ```bash
-sudo cp etc/cron.d/bitcoin-node-watchdog /etc/cron.d/
+sudo cp deploy/cron/bitcoin-node-watchdog /etc/cron.d/
 ```
 
 ### 3. Set proper permissions

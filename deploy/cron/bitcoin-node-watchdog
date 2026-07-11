@@ -4,9 +4,9 @@
 
 SHELL=/bin/sh
 PATH=/usr/sbin:/usr/bin:/sbin:/bin
-HOME=/home/pi/raspberry/bitcoin-node-watchdog
+APP_DIR=/home/pi/raspberry/bitcoin-node-watchdog
 LOG=/var/log/bitcoin-node-watchdog-cron.log
 TZ=Europe/Zurich
 
 # --- Hourly heartbeat ---------------------------------------------------------
-0 * * * *  pi  cd $HOME && .venv/bin/python -m heartbeat_sender >> $LOG 2>&1
+0 * * * *  pi  cd $APP_DIR && .venv/bin/python -m heartbeat_sender >> $LOG 2>&1
