@@ -155,3 +155,30 @@
 | 2.9 | various | nit | Nonce round-trip, IPv4-only DNS, `HOME=` in cron, unmonitored DLQ, env-var secret |
 
 No blockers. The two majors are small, contained fixes (an `isinstance` check and a deadline in the recv loop). Overall the codebase is small, deliberate, and unusually well-commented about its security tradeoffs.
+
+---
+
+## Fix status (2026-07-11, branch `fix/code-review-findings`)
+
+| Finding | Commit |
+|---------|--------|
+| 1.1 non-object JSON crash | `ff7971d` fix(receiver): reject non-object JSON bodies with 400 |
+| 1.2 verack deadline | `8e7f376` fix(checker): enforce wall-clock deadline in verack wait |
+| 2.1 sign whole body | `56695c6` feat(auth): sign the raw request body instead of sent_at only |
+| 2.2 pin NodeId | `f1b4fd7` fix(receiver): pin NodeId dimension to configured NODE_ID |
+| 2.3 namespace-scoped IAM | `28f27b3` security(iam): scope PutMetricData to the BitcoinNode namespace |
+| 2.4 KMS SourceAccount | `3fede08` security(kms): add aws:SourceAccount condition to CloudWatch key grant |
+| 2.5 smoke test timeout | `b8ab198` fix(smoke): add request timeouts |
+| 2.6 concurrency cap | `0096873` feat(stack): cap receiver concurrency at 5 |
+| 2.7 auth test coverage | `9fac1bc` test(receiver): cover signature-mismatch and future clock-skew paths |
+| 2.8 DynamoDB doc drift | `89524f3` docs: remove DynamoDB references |
+| 2.9 nonce round-trip | `b059ed1` refactor(checker): simplify nonce generation |
+| 2.9 IPv4-only DNS | `ca99b77` fix(checker): resolve via getaddrinfo and support IPv6 peers |
+| 2.9 HOME= in cron | `edfc073` fix(cron): use APP_DIR instead of repurposing HOME |
+| 2.9 unmonitored DLQ | `9e25cbc` feat(stack): alarm on the reachability checker DLQ |
+| 2.9 env-var secret | **not fixed** — documented tradeoff; migrating to SSM SecureString/Secrets Manager needs an out-of-band secret creation step and a coordinated Pi update; tracked as future work |
+
+Deployment notes:
+- **2.1 is a breaking protocol change**: deploy the Lambda, then update the Pi's checkout before the next cron tick. A few rejected heartbeats are harmless (alarm needs 6 consecutive misses).
+- **2.9 cron**: re-copy `deploy/cron/bitcoin-node-watchdog` to `/etc/cron.d/` on the Pi.
+- **Smoke test** now also requires `NODE_ID=<node-id>` in the environment.
