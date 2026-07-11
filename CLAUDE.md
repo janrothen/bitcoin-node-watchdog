@@ -44,6 +44,7 @@ tests/
   test_heartbeat_sender.py
   test_reachability_checker.py
   test_bitcoin_monitor_stack.py
+reviews/                    # code review findings and fix status
 config.toml                 # runtime config (heartbeat URL only)
 pyproject.toml              # packaging and dependencies
 .env.example                # template for .env (HEARTBEAT_SECRET, NODE_ID)
@@ -59,6 +60,9 @@ sonar-project.properties    # SonarCloud project configuration
 - Alarm threshold: 6 consecutive hourly periods (6 hours) of missing/failed data
 - SES replaced by SNS; SNS subscription must be confirmed after first deploy
 - Heartbeat auth: sender computes `HMAC-SHA256(secret, raw request body)` and sends the hex digest as `X-Heartbeat-Signature-256` — secret never in plaintext; every body field (source, sent_at) is authenticated; receiver verifies before parsing and rejects requests older than 90 seconds
+- Receiver pins the CloudWatch `NodeId` dimension to its `NODE_ID` env var (same CDK context value the alarms watch) and rejects a mismatched body `source` with 400 — a misconfigured Pi fails loudly in its own cron log
+- Receiver Function URL is unauthenticated at the AWS layer (HMAC checked in-handler), so reserved concurrency is capped at 5 to bound abuse
+- Checker failures land in an SQS DLQ after EventBridge retries; a third alarm (`BitcoinNode-CheckerDLQ`) emails when that happens
 
 ## Dev/test
 ```bash
