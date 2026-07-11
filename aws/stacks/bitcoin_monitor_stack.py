@@ -97,6 +97,9 @@ class BitcoinMonitorStack(cdk.Stack):
             code=_lambda_code("heartbeat_receiver"),
             environment={
                 "HEARTBEAT_SECRET": heartbeat_secret,
+                # The metric dimension the alarm watches — pinned server-side
+                # so a misconfigured Pi can't emit under a different NodeId.
+                "NODE_ID": node_id,
             },
         )
         receiver.add_to_role_policy(

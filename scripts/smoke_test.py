@@ -27,18 +27,20 @@ def _endpoint() -> str:
 def main():
     endpoint = _endpoint()
     secret = os.environ["HEARTBEAT_SECRET"]
+    # Must match the deployed stack's node_id — the receiver rejects other sources.
+    node_id = os.environ["NODE_ID"]
 
     # 1. Unauthenticated → expect 401
     r = requests.post(
         endpoint,
-        json={"source": "smoke", "sent_at": datetime.now(UTC).isoformat()},
+        json={"source": node_id, "sent_at": datetime.now(UTC).isoformat()},
     )
     status = "PASS" if r.status_code == 401 else f"FAIL (got {r.status_code})"
     print(f"[{status}] No auth → {r.status_code}")
 
     # 2. Valid HMAC signature → expect 200
     sent_at = datetime.now(UTC).isoformat()
-    payload = json.dumps({"source": "smoke", "sent_at": sent_at})
+    payload = json.dumps({"source": node_id, "sent_at": sent_at})
     r = requests.post(
         endpoint,
         data=payload,

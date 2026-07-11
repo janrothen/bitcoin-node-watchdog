@@ -119,7 +119,7 @@ The Pi package has no dependency on AWS at runtime beyond the heartbeat HTTP POS
 After deploying, verify the Lambda endpoint rejects unauthenticated requests and accepts valid ones:
 
 ```bash
-HEARTBEAT_SECRET=<your-secret> python scripts/smoke_test.py
+HEARTBEAT_SECRET=<your-secret> NODE_ID=<your-node-id> python scripts/smoke_test.py
 ```
 
 Expected output:
@@ -158,7 +158,7 @@ Requires AWS CLI configured with credentials that have `cloudwatch:SetAlarmState
 - [ ] Push to `main` → GitHub Actions runs `cdk deploy`
 - [ ] Confirm SNS subscription email
 - [ ] Update `config.toml` on the Pi with `HeartbeatReceiverUrl`
-- [ ] Run `HEARTBEAT_SECRET=<secret> python scripts/smoke_test.py` — both lines should show `PASS`
+- [ ] Run `HEARTBEAT_SECRET=<secret> NODE_ID=<node-id> python scripts/smoke_test.py` — both lines should show `PASS`
 
 ### Pi — cron job
 
@@ -229,7 +229,7 @@ After the first deploy, AWS sends a confirmation email to the address configured
 
 **7. Verify the endpoint:**
 ```bash
-HEARTBEAT_SECRET=<your-secret> python scripts/smoke_test.py
+HEARTBEAT_SECRET=<your-secret> NODE_ID=<your-node-id> python scripts/smoke_test.py
 ```
 Expected: `[PASS] No auth → 401` and `[PASS] Valid signature → 200`.
 

@@ -49,11 +49,12 @@ def test_known_source(mock_cw):
 
 
 @patch.object(lf, "cloudwatch")
-def test_missing_source_defaults_to_unknown(mock_cw):
+def test_missing_source_rejected(mock_cw):
     sent_at = datetime.now(UTC).isoformat()
     event = _signed_event({"sent_at": sent_at})
     result = lf.lambda_handler(event, None)
-    assert result == {"statusCode": 200, "body": "ok"}
+    assert result == {"statusCode": 400, "body": "unknown source"}
+    mock_cw.put_metric_data.assert_not_called()
 
 
 @patch.object(lf, "cloudwatch")
@@ -86,7 +87,7 @@ def test_non_object_json_returns_400(mock_cw, body):
 
 
 @patch.object(lf, "cloudwatch")
-def test_cloudwatch_metric_uses_source_as_node_id(mock_cw):
+def test_cloudwatch_metric_uses_configured_node_id(mock_cw):
     lf.lambda_handler(_event(), None)
     metric = mock_cw.put_metric_data.call_args.kwargs["MetricData"][0]
     assert metric["Dimensions"][0] == {"Name": "NodeId", "Value": "lasvegas"}
@@ -156,10 +157,12 @@ def test_non_string_sent_at_returns_400(mock_cw):
 
 
 @patch.object(lf, "cloudwatch")
-def test_non_string_source_recorded_as_unknown(mock_cw):
+@pytest.mark.parametrize("source", [0, None, "other-node", ""])
+def test_wrong_source_rejected(mock_cw, source):
+    # The NodeId dimension is pinned server-side: any source that doesn't match
+    # the configured NODE_ID is rejected instead of minting a new dimension.
     sent_at = datetime.now(UTC).isoformat()
-    event = _signed_event({"source": 0, "sent_at": sent_at})
+    event = _signed_event({"source": source, "sent_at": sent_at})
     result = lf.lambda_handler(event, None)
-    assert result == {"statusCode": 200, "body": "ok"}
-    metric = mock_cw.put_metric_data.call_args.kwargs["MetricData"][0]
-    assert metric["Dimensions"][0] == {"Name": "NodeId", "Value": "unknown"}
+    assert result == {"statusCode": 400, "body": "unknown source"}
+    mock_cw.put_metric_data.assert_not_called()
