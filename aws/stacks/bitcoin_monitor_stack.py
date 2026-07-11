@@ -98,6 +98,10 @@ class BitcoinMonitorStack(cdk.Stack):
             runtime=lambda_.Runtime.PYTHON_3_13,
             handler="lambda_function.lambda_handler",
             code=_lambda_code("heartbeat_receiver"),
+            # The Function URL is unauthenticated (HMAC is checked inside the
+            # handler), so cap concurrency: one Pi posting hourly needs almost
+            # none, and abuse can't run up cost or starve the account limit.
+            reserved_concurrent_executions=5,
             environment={
                 "HEARTBEAT_SECRET": heartbeat_secret,
                 # The metric dimension the alarm watches — pinned server-side
