@@ -25,10 +25,14 @@ class _ValidationError(Exception):
 
 
 def _parse_body(event: dict) -> dict:
+    invalid = _ValidationError({"statusCode": 400, "body": "invalid json"})
     try:
-        return json.loads(event.get("body") or "{}")
+        body = json.loads(event.get("body") or "{}")
     except json.JSONDecodeError:
-        raise _ValidationError({"statusCode": 400, "body": "invalid json"}) from None
+        raise invalid from None
+    if not isinstance(body, dict):
+        raise invalid
+    return body
 
 
 def _verify_signature(event: dict, sent_at_raw: object) -> None:
