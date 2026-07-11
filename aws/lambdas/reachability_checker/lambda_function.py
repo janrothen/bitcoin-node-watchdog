@@ -77,16 +77,22 @@ def _message(command: bytes, payload: bytes) -> bytes:
 
 
 def _wait_for_verack(sock: socket.socket) -> bool:
-    sock.settimeout(10)
     buf = b""
-    # Read until we find a verack/version header or give up after 4096 bytes.
-    # Bounded by the 10s socket timeout even if the remote sends continuous garbage.
+    # Read until we find a verack/version header or give up after 4096 bytes or
+    # 10 seconds of wall-clock time. The deadline shrinks the per-recv timeout so
+    # a peer dribbling one byte per recv cannot hold the loop open until the
+    # Lambda timeout kills the function before the metric is emitted.
     # Note: this is a substring scan, not a framed parse — the header bytes could
     # in theory appear inside another message's payload. Acceptable for a liveness
     # probe; a hostile peer forging such a payload still proves the port is open.
     verack_cmd = MAGIC + b"verack\x00\x00\x00\x00\x00\x00"
     version_cmd = MAGIC + b"version\x00\x00\x00\x00\x00"
+    deadline = time.monotonic() + 10
     while len(buf) < 4096:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return False
+        sock.settimeout(remaining)
         chunk = sock.recv(256)
         if not chunk:
             break

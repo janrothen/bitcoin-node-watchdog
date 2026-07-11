@@ -97,6 +97,27 @@ def test_wait_for_verack_garbage_fills_buffer():
     assert lf._wait_for_verack(sock) is False
 
 
+def test_wait_for_verack_slow_dribble_hits_deadline():
+    # A peer sending one byte per recv must be cut off by the 10s wall-clock
+    # deadline, not held open until the byte cap or the Lambda timeout.
+    sock = MagicMock()
+    sock.recv.return_value = b"x"
+    with patch.object(lf.time, "monotonic", side_effect=[0, 3, 6, 9, 12, 15]):
+        assert lf._wait_for_verack(sock) is False
+    # Only the recvs before the deadline run (t=3, 6, 9); t=12 is cut off.
+    assert sock.recv.call_count == 3
+
+
+def test_wait_for_verack_shrinks_recv_timeout():
+    sock = MagicMock()
+    sock.recv.side_effect = [b"x", VERACK]
+    with patch.object(lf.time, "monotonic", side_effect=[0, 2, 5]):
+        assert lf._wait_for_verack(sock) is True
+    # Per-recv timeout is the time remaining until the deadline, not a flat 10s.
+    assert sock.settimeout.call_args_list[0].args == (8,)
+    assert sock.settimeout.call_args_list[1].args == (5,)
+
+
 # ── _put_metric ───────────────────────────────────────────────────────────────
 
 
