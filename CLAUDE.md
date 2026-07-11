@@ -25,7 +25,7 @@ aws/                        # CDK infrastructure (deployed via GitHub Actions)
   stacks/bitcoin_monitor_stack.py
   lambdas/
     heartbeat_receiver/
-      lambda_function.py    # POST from Pi → DynamoDB + CloudWatch metric
+      lambda_function.py    # POST from Pi → CloudWatch metric
     reachability_checker/
       lambda_function.py    # EventBridge hourly → Bitcoin P2P check → CloudWatch metric
 deploy/

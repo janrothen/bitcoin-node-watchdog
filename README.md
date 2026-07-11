@@ -27,7 +27,7 @@ Monitors a Bitcoin full node running on a Raspberry Pi. A Python package on the 
 
 **External dependencies**
 - [DuckDNS](https://www.duckdns.org) — provides a stable hostname for your dynamic IP
-- AWS Lambda, DynamoDB, CloudWatch, SNS, EventBridge (all managed by the CDK stack)
+- AWS Lambda, CloudWatch, SNS, EventBridge (all managed by the CDK stack)
 
 ## Architecture
 
