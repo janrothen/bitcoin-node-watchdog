@@ -83,6 +83,23 @@ def test_put_metric_data_scoped_to_namespace(tmpl):
         }
 
 
+# ── KMS ───────────────────────────────────────────────────────────────────────
+
+
+def test_kms_cloudwatch_grant_has_source_account_condition(tmpl):
+    keys = tmpl.find_resources("AWS::KMS::Key")
+    assert len(keys) == 1
+    statements = next(iter(keys.values()))["Properties"]["KeyPolicy"]["Statement"]
+    cloudwatch_stmts = [
+        stmt
+        for stmt in statements
+        if stmt.get("Principal") == {"Service": "cloudwatch.amazonaws.com"}
+    ]
+    assert len(cloudwatch_stmts) == 1
+    condition = cloudwatch_stmts[0]["Condition"]["StringEquals"]
+    assert "aws:SourceAccount" in condition
+
+
 # ── CloudWatch alarms ─────────────────────────────────────────────────────────
 
 
