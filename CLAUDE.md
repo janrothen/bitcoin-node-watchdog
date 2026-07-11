@@ -58,7 +58,7 @@ sonar-project.properties    # SonarCloud project configuration
 - CloudWatch Alarms handle state: one email on ALARM, one on OK — no repeated alerts
 - Alarm threshold: 6 consecutive hourly periods (6 hours) of missing/failed data
 - SES replaced by SNS; SNS subscription must be confirmed after first deploy
-- Heartbeat auth: sender computes `HMAC-SHA256(secret, sent_at)` and sends the hex digest as `X-Heartbeat-Signature-256` — secret never in plaintext; receiver rejects requests older than 90 seconds
+- Heartbeat auth: sender computes `HMAC-SHA256(secret, raw request body)` and sends the hex digest as `X-Heartbeat-Signature-256` — secret never in plaintext; every body field (source, sent_at) is authenticated; receiver verifies before parsing and rejects requests older than 90 seconds
 
 ## Dev/test
 ```bash

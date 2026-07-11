@@ -264,7 +264,7 @@ All resources live in the `BitcoinMonitorStack` CloudFormation stack (visible in
 ## Security
 
 - `config.toml` contains no secrets — it is safe to commit
-- Requests are authenticated with HMAC-SHA256: the sender computes `HMAC(secret, sent_at)` and sends the hex digest as `X-Heartbeat-Signature-256` — the secret is never transmitted in plaintext. Each signature is single-use, bound to its timestamp, and the receiver rejects requests older than 90 seconds
+- Requests are authenticated with HMAC-SHA256: the sender computes `HMAC(secret, raw request body)` and sends the hex digest as `X-Heartbeat-Signature-256` — the secret is never transmitted in plaintext and every body field is authenticated. Each signature is single-use, bound to the timestamp inside the body, and the receiver rejects requests older than 90 seconds
 - Never commit AWS credentials — the deployment uses OIDC (no stored keys)
 - The `AWS_ACCOUNT_ID` GitHub secret is a 12-digit number, not a credential, but keep it private
 

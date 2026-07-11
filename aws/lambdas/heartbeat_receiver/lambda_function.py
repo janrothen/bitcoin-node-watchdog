@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import hmac
 import json
@@ -24,38 +25,48 @@ class _ValidationError(Exception):
         self.response = response
 
 
-def _parse_body(event: dict) -> dict:
+def _raw_body(event: dict) -> bytes:
+    body = event.get("body") or ""
+    if event.get("isBase64Encoded"):
+        try:
+            return base64.b64decode(body)
+        except (ValueError, TypeError):
+            raise _ValidationError(
+                {"statusCode": 400, "body": "invalid body"}
+            ) from None
+    return body.encode()
+
+
+def _parse_body(raw_body: bytes) -> dict:
     invalid = _ValidationError({"statusCode": 400, "body": "invalid json"})
     try:
-        body = json.loads(event.get("body") or "{}")
-    except json.JSONDecodeError:
+        body = json.loads(raw_body or b"{}")
+    except (json.JSONDecodeError, UnicodeDecodeError):
         raise invalid from None
     if not isinstance(body, dict):
         raise invalid
     return body
 
 
-def _verify_signature(event: dict, sent_at_raw: object) -> None:
-    # A missing or non-string sent_at is treated as an auth failure so
-    # unauthenticated callers cannot probe field names or types via different
-    # error codes.
-    unauthorized = _ValidationError({"statusCode": 401, "body": "unauthorized"})
-    if not isinstance(sent_at_raw, str) or not sent_at_raw:
-        raise unauthorized
+def _verify_signature(event: dict, raw_body: bytes) -> None:
+    # The HMAC covers the raw body bytes as received, so every field (source,
+    # sent_at) is authenticated and verification happens before any parsing —
+    # unauthenticated callers get a uniform 401 and can probe nothing.
     headers = event.get("headers") or {}
     token = headers.get(_SIGNATURE_HEADER.lower()) or headers.get(_SIGNATURE_HEADER)
-    expected = hmac.new(
-        _SECRET.encode(), sent_at_raw.encode(), hashlib.sha256
-    ).hexdigest()
+    expected = hmac.new(_SECRET.encode(), raw_body, hashlib.sha256).hexdigest()
     if not token or not hmac.compare_digest(token, expected):
-        raise unauthorized
+        raise _ValidationError({"statusCode": 401, "body": "unauthorized"})
 
 
-def _parse_sent_at(sent_at_raw: str) -> datetime:
+def _parse_sent_at(sent_at_raw: object) -> datetime:
+    invalid = _ValidationError({"statusCode": 400, "body": "invalid sent_at"})
+    if not isinstance(sent_at_raw, str):
+        raise invalid
     try:
         sent_at = datetime.fromisoformat(sent_at_raw)
     except ValueError:
-        raise _ValidationError({"statusCode": 400, "body": "invalid sent_at"}) from None
+        raise invalid from None
     if sent_at.tzinfo is None:
         sent_at = sent_at.replace(tzinfo=UTC)
     return sent_at
@@ -93,12 +104,12 @@ def _extract_source(body: dict) -> str:
 
 def lambda_handler(event: dict, _context: object) -> Response:
     try:
-        body = _parse_body(event)
-        # Verify auth before any further validation — prevents unauthenticated
-        # callers from probing field names via different error codes.
-        sent_at_raw = body.get("sent_at")
-        _verify_signature(event, sent_at_raw)
-        sent_at = _parse_sent_at(sent_at_raw)
+        raw_body = _raw_body(event)
+        # Verify auth before any parsing — prevents unauthenticated callers
+        # from probing body structure or field names via different error codes.
+        _verify_signature(event, raw_body)
+        body = _parse_body(raw_body)
+        sent_at = _parse_sent_at(body.get("sent_at"))
         _check_freshness(sent_at)
     except _ValidationError as e:
         return e.response
