@@ -75,6 +75,7 @@ Copy `.env.example` to `.env` and fill in your credentials:
 
 ```bash
 cp .env.example .env
+chmod 600 .env  # the heartbeat is a secret — keep it owner-readable only
 ```
 
 ```dotenv
