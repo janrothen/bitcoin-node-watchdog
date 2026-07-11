@@ -6,6 +6,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 _LAMBDA = (
     Path(__file__).parent.parent / "aws/lambdas/heartbeat_receiver/lambda_function.py"
 )
@@ -55,6 +57,16 @@ def test_missing_source_defaults_to_unknown(mock_cw):
 @patch.object(lf, "cloudwatch")
 def test_malformed_json_returns_400(mock_cw):
     event = {"headers": {}, "body": "not-json"}
+    result = lf.lambda_handler(event, None)
+    assert result == {"statusCode": 400, "body": "invalid json"}
+    mock_cw.put_metric_data.assert_not_called()
+
+
+@patch.object(lf, "cloudwatch")
+@pytest.mark.parametrize("body", ["[]", '"x"', "42", "null", "true"])
+def test_non_object_json_returns_400(mock_cw, body):
+    # Valid JSON that is not an object must be rejected, not crash the handler.
+    event = {"headers": {}, "body": body}
     result = lf.lambda_handler(event, None)
     assert result == {"statusCode": 400, "body": "invalid json"}
     mock_cw.put_metric_data.assert_not_called()
