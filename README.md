@@ -244,6 +244,7 @@ All resources live in the `BitcoinMonitorStack` CloudFormation stack (visible in
 | `BitcoinNodeAlerts` SNS topic | Delivers alarm and recovery emails |
 | `BitcoinNode-HeartbeatMissing` CloudWatch alarm | Fires after 6h of missing heartbeats |
 | `BitcoinNode-NotReachable` CloudWatch alarm | Fires after 6h of failed reachability checks |
+| `BitcoinNode-CheckerDLQ` CloudWatch alarm | Fires when checker invocations exhaust retries and land in the DLQ |
 | EventBridge rule | Triggers reachability checker every hour |
 
 ## Troubleshooting

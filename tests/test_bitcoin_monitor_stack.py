@@ -113,8 +113,8 @@ def test_kms_cloudwatch_grant_has_source_account_condition(tmpl):
 # ── CloudWatch alarms ─────────────────────────────────────────────────────────
 
 
-def test_two_alarms_created(tmpl):
-    tmpl.resource_count_is("AWS::CloudWatch::Alarm", 2)
+def test_three_alarms_created(tmpl):
+    tmpl.resource_count_is("AWS::CloudWatch::Alarm", 3)
 
 
 def test_alarms_evaluate_6_consecutive_periods(tmpl):
@@ -128,6 +128,19 @@ def test_alarms_treat_missing_data_as_breaching(tmpl):
     tmpl.has_resource_properties(
         "AWS::CloudWatch::Alarm",
         {"TreatMissingData": "breaching"},
+    )
+
+
+def test_dlq_alarm_fires_on_any_message(tmpl):
+    tmpl.has_resource_properties(
+        "AWS::CloudWatch::Alarm",
+        {
+            "AlarmName": "BitcoinNode-CheckerDLQ",
+            "MetricName": "ApproximateNumberOfMessagesVisible",
+            "Threshold": 0,
+            "ComparisonOperator": "GreaterThanThreshold",
+            "TreatMissingData": "notBreaching",
+        },
     )
 
 

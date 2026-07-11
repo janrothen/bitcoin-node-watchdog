@@ -212,6 +212,25 @@ class BitcoinMonitorStack(cdk.Stack):
             statistic="Maximum",
         )
 
+        # A checker failure already alerts via missing data (breaching), but
+        # without this the DLQ fills silently and entries expire after 14 days
+        # unseen. One email when retries are exhausted, one when it drains.
+        dlq_alarm = cloudwatch.Alarm(
+            self,
+            "CheckerDlqAlarm",
+            alarm_name="BitcoinNode-CheckerDLQ",
+            alarm_description="Reachability checker invocations exhausted retries",
+            metric=checker_dlq.metric_approximate_number_of_messages_visible(
+                period=CHECK_PERIOD,
+            ),
+            evaluation_periods=1,
+            threshold=0,
+            comparison_operator=cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+            treat_missing_data=cloudwatch.TreatMissingData.NOT_BREACHING,
+        )
+        dlq_alarm.add_alarm_action(cloudwatch_actions.SnsAction(alert_topic))
+        dlq_alarm.add_ok_action(cloudwatch_actions.SnsAction(alert_topic))
+
         # ── Outputs ───────────────────────────────────────────────────────────
         CfnOutput(
             self,
