@@ -69,6 +69,9 @@ class BitcoinMonitorStack(cdk.Stack):
                 principals=[iam.ServicePrincipal("cloudwatch.amazonaws.com")],
                 actions=["kms:GenerateDataKey*", "kms:Decrypt"],
                 resources=["*"],
+                # Confused-deputy guard: only CloudWatch acting on behalf of
+                # this account may use the key, not on behalf of other accounts.
+                conditions={"StringEquals": {"aws:SourceAccount": self.account}},
             )
         )
         alert_topic = sns.Topic(
