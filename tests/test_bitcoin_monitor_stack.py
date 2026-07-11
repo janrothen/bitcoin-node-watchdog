@@ -46,6 +46,18 @@ def test_heartbeat_receiver_exists(tmpl):
     )
 
 
+def test_heartbeat_receiver_pins_node_id(tmpl):
+    tmpl.has_resource_properties(
+        "AWS::Lambda::Function",
+        {
+            "FunctionName": "piHeartbeatReceiver",
+            "Environment": {
+                "Variables": Match.object_like({"NODE_ID": "test-node"}),
+            },
+        },
+    )
+
+
 def test_reachability_checker_timeout_30s(tmpl):
     tmpl.has_resource_properties(
         "AWS::Lambda::Function",

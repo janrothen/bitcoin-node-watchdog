@@ -15,6 +15,7 @@ cloudwatch = boto3.client(
 _NAMESPACE = "BitcoinNode"
 _MAX_AGE = timedelta(seconds=90)
 _SECRET = os.environ["HEARTBEAT_SECRET"]
+_NODE_ID = os.environ["NODE_ID"]
 _SIGNATURE_HEADER = "X-Heartbeat-Signature-256"
 
 type Response = dict[str, int | str]
@@ -91,15 +92,17 @@ def _emit_metric(metric_name: str, value: float, node_id: str) -> None:
     )
 
 
-def _record_heartbeat(source: str) -> None:
-    _emit_metric("HeartbeatReceived", 1.0, source)
+def _record_heartbeat() -> None:
+    _emit_metric("HeartbeatReceived", 1.0, _NODE_ID)
 
 
-def _extract_source(body: dict) -> str:
-    source = body.get("source")
-    if not isinstance(source, str) or not source:
-        return "unknown"
-    return source[:256]
+def _check_source(body: dict) -> None:
+    # The alarm watches NodeId=<configured node_id>, so the metric dimension is
+    # pinned to the receiver's own NODE_ID rather than trusting the request. A
+    # mismatched source means the Pi's .env disagrees with the deployed stack —
+    # reject loudly so the misconfiguration shows up in the Pi's cron log.
+    if body.get("source") != _NODE_ID:
+        raise _ValidationError({"statusCode": 400, "body": "unknown source"})
 
 
 def lambda_handler(event: dict, _context: object) -> Response:
@@ -111,8 +114,9 @@ def lambda_handler(event: dict, _context: object) -> Response:
         body = _parse_body(raw_body)
         sent_at = _parse_sent_at(body.get("sent_at"))
         _check_freshness(sent_at)
+        _check_source(body)
     except _ValidationError as e:
         return e.response
 
-    _record_heartbeat(_extract_source(body))
+    _record_heartbeat()
     return {"statusCode": 200, "body": "ok"}
