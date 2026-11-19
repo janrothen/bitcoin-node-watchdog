@@ -154,7 +154,7 @@ Requires AWS CLI configured with credentials that have `cloudwatch:SetAlarmState
 ### First-deploy checklist
 
 - [ ] Bootstrap CDK (once per account/region)
-- [ ] Configure GitHub OIDC and create `GitHubActionsDeployRole`
+- [ ] Configure GitHub OIDC and create `GitHubActions-bitcoin-node-watchdog-DeployRole`
 - [ ] Add `AWS_ACCOUNT_ID`, `HEARTBEAT_SECRET`, `NODE_ID`, and `ALERT_EMAIL` GitHub secrets
 - [ ] Push to `main` → GitHub Actions runs `cdk deploy`
 - [ ] Confirm SNS subscription email
@@ -186,7 +186,7 @@ cdk bootstrap aws://YOUR_ACCOUNT_ID/eu-north-1
   - Type: OpenID Connect
   - URL: `https://token.actions.githubusercontent.com`
   - Audience: `sts.amazonaws.com`
-- Create IAM Role `GitHubActionsDeployRole` with trust policy:
+- Create IAM Role `GitHubActions-bitcoin-node-watchdog-DeployRole` (the name `deploy-aws.yml` assumes) with this trust policy. The `sub` condition limits it to workflow runs on `main`:
   ```json
   {
     "Effect": "Allow",
@@ -202,7 +202,19 @@ cdk bootstrap aws://YOUR_ACCOUNT_ID/eu-north-1
     }
   }
   ```
-- Attach permissions: `AWSCloudFormationFullAccess`, `AWSLambda_FullAccess`, `AmazonSNSFullAccess`, `CloudWatchFullAccess`, `AmazonEventBridgeFullAccess`, `IAMFullAccess`
+- Attach only this inline permissions policy. `cdk deploy` does all its work through the roles created by `cdk bootstrap`, so the GitHub role only needs to assume those (no AWS-managed `*FullAccess` policies):
+  ```json
+  {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": "sts:AssumeRole",
+        "Resource": "arn:aws:iam::ACCOUNT_ID:role/cdk-*-eu-north-1"
+      }
+    ]
+  }
+  ```
 
 **3. Add GitHub secrets:**
 - Repo Settings → Secrets and variables → Actions → New secret
@@ -256,6 +268,8 @@ All resources live in the `BitcoinMonitorStack` CloudFormation stack (visible in
 | No alert email ever arrives | SNS subscription not confirmed — check inbox for the confirmation link |
 | Alert fires but node is actually fine | bitnodes handshake timing out due to slow node startup; wait for full sync |
 | `cdk deploy` fails with auth error | OIDC role misconfigured or `AWS_ACCOUNT_ID` secret wrong — re-check IAM trust policy |
+| `cdk deploy` fails with `not authorized to perform: sts:AssumeRole` on a `cdk-*` role | CDK not bootstrapped in `eu-north-1`, or the deploy role's inline policy doesn't match the bootstrap role names — run `cdk bootstrap` and check the `Resource` ARN |
+| Manual workflow run skips the deploy job | It was dispatched from a branch other than `main` — deploys only run from `main` |
 | `python -m heartbeat_sender` exits silently | `heartbeat.receiver.endpoint` in `config.toml` not set — update with CloudFormation output URL |
 | Heartbeat sender gets 401 | `HEARTBEAT_SECRET` on the Pi doesn't match the secret used during `cdk deploy` — re-check both and redeploy if needed |
 | Heartbeat sender gets 400 `unknown source` | `NODE_ID` on the Pi doesn't match the `node_id` CDK context of the deployed stack — align the two |
@@ -275,7 +289,7 @@ All resources live in the `BitcoinMonitorStack` CloudFormation stack (visible in
 - Never commit AWS credentials — the deployment uses OIDC (no stored keys)
 - GitHub Actions are pinned to commit SHAs, and secrets reach `cdk deploy` through environment variables, never through `${{ }}` inside a `run:` script
 - `aws/cdk.out/` is git-ignored: a local `cdk synth` writes the heartbeat secret there in plaintext
-- After pulling dependency updates, re-run `pip install .` on the Pi so the version floors in `pyproject.toml` (e.g. `certifi`, `urllib3`) take effect. Latest findings are in [`reviews/2026-11-19-security-review.md`](reviews/2026-11-19-security-review.md)
+- After pulling dependency updates, re-run `pip install .` on the Pi so the version floors in `pyproject.toml` (e.g. `certifi`, `urllib3`) take effect.
 - The `AWS_ACCOUNT_ID` GitHub secret is a 12-digit number, not a credential, but keep it private
 
 ## Contributing
