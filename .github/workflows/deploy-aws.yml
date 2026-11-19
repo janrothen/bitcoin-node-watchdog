@@ -14,9 +14,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
         with:
           python-version: '3.13'
 
@@ -27,11 +27,24 @@ jobs:
         run: npm install -g aws-cdk
 
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v6
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd  # v6.3.0
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActions-bitcoin-node-watchdog-DeployRole
           aws-region: eu-north-1
 
       - name: Deploy
         working-directory: aws
-        run: cdk deploy --require-approval never --context heartbeat_secret=${{ secrets.HEARTBEAT_SECRET }} --context node_id=${{ secrets.NODE_ID }} --context alert_email=${{ secrets.ALERT_EMAIL }} --context ip_provider_hostname=${{ secrets.IP_PROVIDER_HOSTNAME }}
+        # Secrets go through env vars and quoted expansions, never ${{ }} inside
+        # `run:` — template expansion pastes the raw value into the script, so a
+        # secret containing shell metacharacters would be executed.
+        env:
+          HEARTBEAT_SECRET: ${{ secrets.HEARTBEAT_SECRET }}
+          NODE_ID: ${{ secrets.NODE_ID }}
+          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
+          IP_PROVIDER_HOSTNAME: ${{ secrets.IP_PROVIDER_HOSTNAME }}
+        run: >-
+          cdk deploy --require-approval never
+          --context "heartbeat_secret=$HEARTBEAT_SECRET"
+          --context "node_id=$NODE_ID"
+          --context "alert_email=$ALERT_EMAIL"
+          --context "ip_provider_hostname=$IP_PROVIDER_HOSTNAME"
