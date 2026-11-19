@@ -16,3 +16,6 @@ coverage.xml
 .claude/worktrees/
 .env
 .venv/
+
+# CDK synth output — contains the heartbeat secret in plaintext
+cdk.out/
