@@ -56,7 +56,11 @@ def _verify_signature(event: dict, raw_body: bytes) -> None:
     headers = event.get("headers") or {}
     token = headers.get(_SIGNATURE_HEADER.lower()) or headers.get(_SIGNATURE_HEADER)
     expected = hmac.new(_SECRET.encode(), raw_body, hashlib.sha256).hexdigest()
-    if not token or not hmac.compare_digest(token, expected):
+    # Compare as bytes: compare_digest raises TypeError on non-ASCII str, which
+    # would turn a junk header into an unhandled 502 instead of a 401.
+    if not token or not hmac.compare_digest(
+        token.encode("utf-8", "surrogateescape"), expected.encode()
+    ):
         raise _ValidationError({"statusCode": 401, "body": "unauthorized"})
 
 

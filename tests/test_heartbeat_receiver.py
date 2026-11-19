@@ -120,6 +120,20 @@ def test_wrong_signature_returns_401(mock_cw):
     mock_cw.put_metric_data.assert_not_called()
 
 
+@pytest.mark.parametrize(
+    "token",
+    ["\u00e9" * 64, "\udcff" * 64, "\u202e"],
+    ids=["latin1", "surrogate", "bidi"],
+)
+@patch.object(lf, "cloudwatch")
+def test_non_ascii_signature_returns_401(mock_cw, token):
+    # str compare_digest raises TypeError on non-ASCII — must be a 401, not a 502.
+    event = _event(headers={"x-heartbeat-signature-256": token})
+    result = lf.lambda_handler(event, None)
+    assert result == {"statusCode": 401, "body": "unauthorized"}
+    mock_cw.put_metric_data.assert_not_called()
+
+
 @patch.object(lf, "cloudwatch")
 def test_signature_over_different_body_returns_401(mock_cw):
     # A valid signature is bound to the exact body bytes — swapping the body
