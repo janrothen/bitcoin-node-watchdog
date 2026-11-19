@@ -8,24 +8,24 @@ version = "0.1.0"
 description = "Heartbeat sender for a Bitcoin full node on Raspberry Pi. Reports liveness to AWS every hour via HMAC-signed HTTP POST."
 requires-python = ">=3.13"
 dependencies = [
-    "requests~=2.33",
-    "python-dotenv~=1.2",
+    "requests~=2.34",
+    "python-dotenv>=1.2.4,<2",
     # Transitive via requests; floors exclude advisories on the TLS path:
     # certifi GHSA-6q48-6c7w-9gw2 (compromised emSign intermediates),
     # urllib3 GHSA-qccp-gfcp-xxvc / GHSA-gh4c-6fx4-qh6g / GHSA-8988-9cw3-xx77.
-    "certifi>=2026.10.19",
+    "certifi>=2026.10.23",
     "urllib3>=2.8,<3",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=9.0.3,<10",  # CVE-2025-71176 fixed in 9.0.3
+    "pytest~=9.2",
     "pytest-cov~=7.1",
-    "pre-commit~=4.5",
-    "aws-cdk-lib~=2.248",
-    "constructs~=10.6",
-    "boto3~=1.42",
-    "ruff>=0.15.9",
+    "pre-commit~=4.7",
+    "aws-cdk-lib~=2.277",
+    "constructs~=10.8",
+    "boto3~=1.44",
+    "ruff>=0.17.6",
 ]
 
 [tool.hatch.build.targets.wheel]
