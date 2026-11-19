@@ -273,6 +273,9 @@ All resources live in the `BitcoinMonitorStack` CloudFormation stack (visible in
 - The receiver pins the CloudWatch `NodeId` dimension to its deployed configuration and rejects requests whose `source` doesn't match — a request can never mint a new metric dimension
 - The heartbeat endpoint is an open Lambda Function URL (auth happens in the handler), so its reserved concurrency is capped at 5 to bound abuse
 - Never commit AWS credentials — the deployment uses OIDC (no stored keys)
+- GitHub Actions are pinned to commit SHAs, and secrets reach `cdk deploy` through environment variables, never through `${{ }}` inside a `run:` script
+- `aws/cdk.out/` is git-ignored: a local `cdk synth` writes the heartbeat secret there in plaintext
+- After pulling dependency updates, re-run `pip install .` on the Pi so the version floors in `pyproject.toml` (e.g. `certifi`, `urllib3`) take effect. Latest findings are in [`reviews/2026-11-19-security-review.md`](reviews/2026-11-19-security-review.md)
 - The `AWS_ACCOUNT_ID` GitHub secret is a 12-digit number, not a credential, but keep it private
 
 ## Contributing
