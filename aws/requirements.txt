@@ -1,2 +1,4 @@
-aws-cdk-lib>=2.170.0
-constructs>=10.0.0
+# Keep in sync with the dev extras in pyproject.toml. Upper bounds stop an
+# unreviewed major release from reaching the production deploy.
+aws-cdk-lib~=2.248
+constructs~=10.6

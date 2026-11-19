@@ -10,11 +10,16 @@ requires-python = ">=3.13"
 dependencies = [
     "requests~=2.33",
     "python-dotenv~=1.2",
+    # Transitive via requests; floors exclude advisories on the TLS path:
+    # certifi GHSA-6q48-6c7w-9gw2 (compromised emSign intermediates),
+    # urllib3 GHSA-qccp-gfcp-xxvc / GHSA-gh4c-6fx4-qh6g / GHSA-8988-9cw3-xx77.
+    "certifi>=2026.10.19",
+    "urllib3>=2.8,<3",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest~=9.0",
+    "pytest>=9.0.3,<10",  # CVE-2025-71176 fixed in 9.0.3
     "pytest-cov~=7.1",
     "pre-commit~=4.5",
     "aws-cdk-lib~=2.248",
